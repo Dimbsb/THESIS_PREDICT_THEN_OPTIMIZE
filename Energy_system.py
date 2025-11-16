@@ -1,9 +1,11 @@
 #A linear programming approach to the optimization of residential energy systems
 import pyomo.environ as pyomo 
+import numpy as np
+from math import pi
  
 # initialize the model
 model = pyomo.ConcreteModel()
-
+eps = np.finfo(float).eps
 # Time 
 model.T = pyomo.Set(initialize=range(8760)) 
 
@@ -45,7 +47,7 @@ model.heat_store_net_flow = pyomo.Var(model.T, domain=pyomo.Reals)
 
 print("Decision variables initialized successfully")
 
-# Parameters
+# Parameters - Table 4 - Table 5
 # Conversion Technologies
 
 # Fuel Cell Parameters
@@ -131,3 +133,97 @@ model.Dt = pyomo.Param(initialize=3600)
 model.co2_price = pyomo.Param(initialize=0.06)   
 
 print("Parameters initialized successfully")
+
+# Objective Function
+
+def objective_rule(model):
+    # Cx
+    conversion_capital = (
+        model.fc_Ccap * model.fc_h_el * model.fuel_cell_chemical_capacity +
+        model.pv_Ccap * model.pv_capacity +
+        model.st_Ccap * model.solar_capacity +
+        model.hp_Ccap * model.heat_pump_capacity +
+        model.boiler_Ccap * model.boiler_h * model.boiler_capacity
+    )
+       
+    #y
+    heat_store_capacity = (
+        model.heat_store_p * (model.heat_store_Cp / 3600) * 
+        (model.heat_store_Thot - model.heat_store_Tcold) * pi * 
+        ((model.heat_store_F / 2)**2) * model.heat_store_height)
+    
+    
+    heat_store_capital = model.heat_store_Ccap * heat_store_capacity
+    battery_capital = model.battery_Ccap * model.battery_capacity
+    
+    # Cy
+    storage_capital = battery_capital + heat_store_capital
+    
+    # Sum
+    total_cop = 0.0
+    for t in model.T:
+
+        # 3.2
+        fuel_cell_cop = ((model.fc_Cfuel + model.co2_price * model.fc_pco2) * model.fuel_gas_flow[t])
+
+        # 3.9
+        boiler_cop = ((model.boiler_Cfuel + model.co2_price * model.boiler_pco2) * model.boiler_gas_flow[t])
+
+        # 3.7
+        heat_pump_cop = ((model.hp_Cfuel + model.co2_price * model.hp_pco2) * 
+                        (model.heat_pump_space_heat[t] / model.hp_h_cop))
+
+        total_cop += fuel_cell_cop + boiler_cop + heat_pump_cop
+
+    # objective function 2.1a
+    return conversion_capital + storage_capital + total_cop
+
+model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
+
+
+# CONSTRAINT 2.1b 
+
+def fuel_cell_min_threshold(model, t):
+    return model.fc_k * model.fuel_cell_chemical_capacity <= model.fuel_gas_flow[t]
+model.fuel_cell_min = pyomo.Constraint(model.T, rule=fuel_cell_min_threshold)
+
+def fuel_cell_max_threshold(model, t):
+    return model.fuel_gas_flow[t] <= model.fuel_cell_chemical_capacity
+model.fuel_cell_max = pyomo.Constraint(model.T, rule=fuel_cell_max_threshold)
+
+def boiler_min_threshold(model, t):
+    return eps <= model.boiler_gas_flow[t]
+model.boiler_min = pyomo.Constraint(model.T, rule=boiler_min_threshold)
+
+def boiler_max_threshold(model, t):
+    return model.boiler_gas_flow[t] <= model.boiler_capacity
+model.boiler_max = pyomo.Constraint(model.T, rule=boiler_max_threshold)
+
+def heat_pump_min_threshold(model, t):
+    return eps <= model.heat_pump_space_heat[t]
+model.heat_pump_min = pyomo.Constraint(model.T, rule=heat_pump_min_threshold)
+
+def heat_pump_max_threshold(model, t):
+    return model.heat_pump_space_heat[t] <= model.heat_pump_capacity
+model.heat_pump_max = pyomo.Constraint(model.T, rule=heat_pump_max_threshold)
+
+def pv_min_threshold(model, t):
+    return eps <= model.pv_electricity[t]
+model.pv_min = pyomo.Constraint(model.T, rule=pv_min_threshold)
+
+def pv_max_threshold(model, t):
+    return model.pv_electricity[t] <= model.pv_capacity
+model.pv_max = pyomo.Constraint(model.T, rule=pv_max_threshold)
+
+def solar_min_threshold(model, t):
+    return eps <= (model.solar_space_heat[t] + model.solar_hot_water[t])
+model.solar_min = pyomo.Constraint(model.T, rule=solar_min_threshold)
+
+def solar_max_threshold(model, t):
+    return (model.solar_space_heat[t] + model.solar_hot_water[t]) <= model.solar_capacity
+model.solar_max = pyomo.Constraint(model.T, rule=solar_max_threshold)
+
+
+# CONSTRAINT 2.1c
+
+
