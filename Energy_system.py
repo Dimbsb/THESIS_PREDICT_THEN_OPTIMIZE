@@ -169,15 +169,13 @@ model.heat_store_capacity = pyomo.Expression(rule=heat_store_capacity_rule)
 def heat_store_m1_rule(model):
     return (pi * model.heat_store_U * (model.heat_store_Thot - model.heat_store_Tbdg) * 
             (model.heat_store_F**2) / 2.0)
+model.heat_store_m1 = pyomo.Expression(rule=heat_store_m1_rule)
 
 # M2 3.11
 def heat_store_m2_rule(model):
     return (pi * model.heat_store_U * (((model.heat_store_Thot - model.heat_store_Tcold)/2.0) - model.heat_store_Tbdg) * 
             model.heat_store_F * model.heat_store_height)
-
-model.heat_store_m1 = pyomo.Expression(rule=heat_store_m1_rule)
 model.heat_store_m2 = pyomo.Expression(rule=heat_store_m2_rule)
-
 
 
 # Objective Function
