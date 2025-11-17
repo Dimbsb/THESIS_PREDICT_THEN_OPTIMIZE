@@ -1,7 +1,9 @@
 #A linear programming approach to the optimization of residential energy systems
 import pyomo.environ as pyomo 
 import numpy as np
+import pandas as pd
 from math import pi
+
  
 # initialize the model
 model = pyomo.ConcreteModel()
@@ -191,39 +193,50 @@ def fuel_cell_max_threshold(model, t):
     return model.fuel_gas_flow[t] <= model.fuel_cell_chemical_capacity
 model.fuel_cell_max = pyomo.Constraint(model.T, rule=fuel_cell_max_threshold)
 
-def boiler_min_threshold(model, t):
-    return eps <= model.boiler_gas_flow[t]
-model.boiler_min = pyomo.Constraint(model.T, rule=boiler_min_threshold)
-
 def boiler_max_threshold(model, t):
     return model.boiler_gas_flow[t] <= model.boiler_capacity
 model.boiler_max = pyomo.Constraint(model.T, rule=boiler_max_threshold)
-
-def heat_pump_min_threshold(model, t):
-    return eps <= model.heat_pump_space_heat[t]
-model.heat_pump_min = pyomo.Constraint(model.T, rule=heat_pump_min_threshold)
 
 def heat_pump_max_threshold(model, t):
     return model.heat_pump_space_heat[t] <= model.heat_pump_capacity
 model.heat_pump_max = pyomo.Constraint(model.T, rule=heat_pump_max_threshold)
 
-def pv_min_threshold(model, t):
-    return eps <= model.pv_electricity[t]
-model.pv_min = pyomo.Constraint(model.T, rule=pv_min_threshold)
-
-def pv_max_threshold(model, t):
-    return model.pv_electricity[t] <= model.pv_capacity
-model.pv_max = pyomo.Constraint(model.T, rule=pv_max_threshold)
-
-def solar_min_threshold(model, t):
-    return eps <= (model.solar_space_heat[t] + model.solar_hot_water[t])
-model.solar_min = pyomo.Constraint(model.T, rule=solar_min_threshold)
-
-def solar_max_threshold(model, t):
-    return (model.solar_space_heat[t] + model.solar_hot_water[t]) <= model.solar_capacity
-model.solar_max = pyomo.Constraint(model.T, rule=solar_max_threshold)
-
 
 # CONSTRAINT 2.1c
 
+def fuel_cell_electricity_from_fuel_ub(model, t):
+    return model.fuel_electricity[t] <= model.fc_h_el * model.fuel_gas_flow[t]
+model.fuel_cell_elec_from_fuel_ub = pyomo.Constraint(model.T, rule=fuel_cell_electricity_from_fuel_ub)
 
+def fuel_cell_heat_from_fuel_ub(model, t):
+    return (model.fuel_space_heat[t] + model.fuel_hot_water[t]) <= model.fc_h_th * model.fuel_gas_flow[t]
+model.fuel_cell_heat_from_fuel_ub = pyomo.Constraint(model.T, rule=fuel_cell_heat_from_fuel_ub)
+
+def boiler_heat_from_gas_ub(model, t):
+    return (model.boiler_space_heat[t] + model.boiler_hot_water[t]) <= model.boiler_h * model.boiler_gas_flow[t]
+model.boiler_heat_from_gas_ub = pyomo.Constraint(model.T, rule=boiler_heat_from_gas_ub)
+
+def solar_thermal_from_capacity_ub(model, t):
+    return (model.solar_space_heat[t] + model.solar_hot_water[t]) <= model.st_h * model.solar_capacity
+model.solar_from_capacity_ub = pyomo.Constraint(model.T, rule=solar_thermal_from_capacity_ub)
+
+# SOLAR RADIATION DATA
+df2017 = pd.read_csv("2017.csv")
+df2017["datetime"] = pd.to_datetime(df2017[["Year", "Month", "Day", "Hour", "Minute"]])
+df2017 = df2017.set_index("datetime")
+ghi_hourly = df2017["GHI"].resample("h").mean()
+print(len(ghi_hourly))  
+ghi_hourly_values = ghi_hourly.values
+assert len(ghi_hourly_values) == 8760
+radiation_data = {t: float(ghi_hourly_values[t]) for t in range(8760)}
+
+model.radiation = pyomo.Param(model.T, initialize=radiation_data,domain=pyomo.NonNegativeReals)
+
+# PV AND HEAT PUMP 2.1b and 2.1c from 3.3 , 3.6 , 3.7
+def pv_solar_electricity_rule(model, t):
+    return model.pv_electricity[t] <= (model.pv_h_el * model.pv_h_pr * (model.radiation[t] / 1000.0) * (model.pv_capacity/model.pv_p))
+model.pv_solar_electricity = pyomo.Constraint(model.T, rule=pv_solar_electricity_rule)
+
+def heat_pump_space_heat_rule(model, t):
+    return model.heat_pump_space_heat[t] <= model.hp_h_cop * model.heat_pump_capacity
+model.hp_space_heat = pyomo.Constraint(model.T, rule=heat_pump_space_heat_rule)
