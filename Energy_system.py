@@ -255,7 +255,6 @@ def battery_discharge_power_limit_rule(model, t):
 model.battery_discharge_power_limit = pyomo.Constraint(model.T, rule=battery_discharge_power_limit_rule)
 
 # Heat Store
-# Heat store capacity y (J or Wh depending on units)
 def heat_store_capacity_rule(model):
     return (model.heat_store_p * (model.heat_store_Cp / 3600) * 
         (model.heat_store_Thot - model.heat_store_Tcold) * pi * 
