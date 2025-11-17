@@ -3,15 +3,14 @@ import pyomo.environ as pyomo
 import numpy as np
 import pandas as pd
 from math import pi
-
  
 # initialize the model
 model = pyomo.ConcreteModel()
-eps = np.finfo(float).eps
 # Time 
 model.T = pyomo.Set(initialize=range(8760)) 
+eps = np.finfo(float).eps
 
-#Decision Variables
+# Decision Variables
 # Cogeneration fuel cell
 model.fuel_cell_chemical_capacity = pyomo.Var(domain=pyomo.NonNegativeReals)
 model.fuel_gas_flow = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
@@ -220,17 +219,17 @@ def solar_thermal_from_capacity_ub(model, t):
     return (model.solar_space_heat[t] + model.solar_hot_water[t]) <= model.st_h * model.solar_capacity
 model.solar_from_capacity_ub = pyomo.Constraint(model.T, rule=solar_thermal_from_capacity_ub)
 
-# SOLAR RADIATION DATA
+# SOLAR RADIATION DATA FROM CSV FILE
 df2017 = pd.read_csv("2017.csv")
 df2017["datetime"] = pd.to_datetime(df2017[["Year", "Month", "Day", "Hour", "Minute"]])
 df2017 = df2017.set_index("datetime")
 ghi_hourly = df2017["GHI"].resample("h").mean()
-print(len(ghi_hourly))  
+assert len(ghi_hourly) == 8760
 ghi_hourly_values = ghi_hourly.values
-assert len(ghi_hourly_values) == 8760
-radiation_data = {t: float(ghi_hourly_values[t]) for t in range(8760)}
+def radiation_init(model, t):
+    return float(ghi_hourly_values[t])
 
-model.radiation = pyomo.Param(model.T, initialize=radiation_data,domain=pyomo.NonNegativeReals)
+model.radiation = pyomo.Param(model.T, initialize=radiation_init, domain=pyomo.NonNegativeReals)
 
 # PV AND HEAT PUMP 2.1b and 2.1c from 3.3 , 3.6 , 3.7
 def pv_solar_electricity_rule(model, t):
@@ -240,3 +239,7 @@ model.pv_solar_electricity = pyomo.Constraint(model.T, rule=pv_solar_electricity
 def heat_pump_space_heat_rule(model, t):
     return model.heat_pump_space_heat[t] <= model.hp_h_cop * model.heat_pump_capacity
 model.hp_space_heat = pyomo.Constraint(model.T, rule=heat_pump_space_heat_rule)
+
+
+# CONSTRAINT 2.1d
+
