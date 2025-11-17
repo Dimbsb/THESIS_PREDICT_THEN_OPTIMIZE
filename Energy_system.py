@@ -45,8 +45,6 @@ model.battery_discharge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals
 # Heat tank storage
 model.heat_store_height = pyomo.Var(domain=pyomo.NonNegativeReals)
 model.heat_store_net_flow = pyomo.Var(model.T, domain=pyomo.Reals)
-model.heat_store_charge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.heat_store_discharge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
 
 print("Decision variables initialized successfully")
 
@@ -153,7 +151,7 @@ def objective_rule(model):
     heat_store_capacity = (
         model.heat_store_p * (model.heat_store_Cp / 3600) * 
         (model.heat_store_Thot - model.heat_store_Tcold) * pi * 
-        ((model.heat_store_F / 2)**2) * model.heat_store_height)
+        ((model.heat_store_F / 2.0)**2) * model.heat_store_height)
     
     
     heat_store_capital = model.heat_store_Ccap * heat_store_capacity
@@ -182,14 +180,6 @@ def objective_rule(model):
     return conversion_capital + storage_capital + total_cop
 
 model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
-
-
-
-# Net Flow 
-def heat_store_net_flow_def_rule(model, t):
-    return model.heat_store_net_flow[t] == (model.heat_store_charge_power[t] - model.heat_store_discharge_power[t])
-model.heat_store_net_flow_def = pyomo.Constraint(model.T,rule=heat_store_net_flow_def_rule)
-
 
 
 # CONSTRAINT 2.1b 
@@ -265,3 +255,25 @@ def battery_discharge_power_limit_rule(model, t):
 model.battery_discharge_power_limit = pyomo.Constraint(model.T, rule=battery_discharge_power_limit_rule)
 
 # Heat Store
+# Heat store capacity y (J or Wh depending on units)
+def heat_store_capacity_rule(model):
+    return (model.heat_store_p * (model.heat_store_Cp / 3600) * 
+        (model.heat_store_Thot - model.heat_store_Tcold) * pi * 
+        ((model.heat_store_F / 2.0)**2) * model.heat_store_height)    
+model.heat_store_capacity = pyomo.Expression(rule=heat_store_capacity_rule)
+
+# M1 3.11
+def heat_store_m1_rule(model):
+    return (pi * model.heat_store_U * (model.heat_store_Thot - model.heat_store_Tbdg) * 
+            (model.heat_store_F**2) / 2.0)
+
+# M2 3.11
+def heat_store_m2_rule(model):
+    return (pi * model.heat_store_U * (((model.heat_store_Thot - model.heat_store_Tcold)/2.0) - model.heat_store_Tbdg) * 
+            model.heat_store_F * model.heat_store_height)
+
+model.heat_store_m1 = pyomo.Expression(rule=heat_store_m1_rule)
+model.heat_store_m2 = pyomo.Expression(rule=heat_store_m2_rule)
+
+
+
