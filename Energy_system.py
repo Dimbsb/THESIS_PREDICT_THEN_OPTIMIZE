@@ -45,6 +45,8 @@ model.battery_discharge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals
 # Heat tank storage
 model.heat_store_height = pyomo.Var(domain=pyomo.NonNegativeReals)
 model.heat_store_net_flow = pyomo.Var(model.T, domain=pyomo.Reals)
+model.heat_store_charge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+model.heat_store_discharge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
 
 print("Decision variables initialized successfully")
 
@@ -182,6 +184,14 @@ def objective_rule(model):
 model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
 
 
+
+# Net Flow 
+def heat_store_net_flow_def_rule(model, t):
+    return model.heat_store_net_flow[t] == (model.heat_store_charge_power[t] - model.heat_store_discharge_power[t])
+model.heat_store_net_flow_def = pyomo.Constraint(model.T,rule=heat_store_net_flow_def_rule)
+
+
+
 # CONSTRAINT 2.1b 
 
 def fuel_cell_min_threshold(model, t):
@@ -243,3 +253,15 @@ model.hp_space_heat = pyomo.Constraint(model.T, rule=heat_pump_space_heat_rule)
 
 # CONSTRAINT 2.1d
 
+# CONSTRAINT 2.1e and 2.1f
+# Battery
+
+def battery_charge_power_limit_rule(model, t):
+    return model.battery_charge_power[t] <= model.battery_p_plus * model.battery_capacity
+model.battery_charge_power_limit = pyomo.Constraint(model.T, rule=battery_charge_power_limit_rule)
+
+def battery_discharge_power_limit_rule(model, t):
+    return model.battery_discharge_power[t] <= model.battery_p_minus * model.battery_capacity
+model.battery_discharge_power_limit = pyomo.Constraint(model.T, rule=battery_discharge_power_limit_rule)
+
+# Heat Store
