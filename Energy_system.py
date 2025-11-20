@@ -1,14 +1,9 @@
-# TO DO 
-# RADIATION
-# Tcoll AND Tamb 
-
-
 #A linear programming approach to the optimization of residential energy systems
 import pyomo.environ as pyomo 
 import numpy as np
 import pandas as pd
 from math import pi
- 
+from pyomo.environ import SolverFactory
 # initialize the model
 model = pyomo.ConcreteModel()
 # Time 
@@ -203,21 +198,21 @@ def objective_rule(model):
     for t in model.T:
 
         # 3.2
-        fuel_cell_cop = ((model.fc_Cfuel + model.co2_price * model.fc_pco2) * model.fuel_gas_flow[t] * (model.Dt / 3600.0))
+        fuel_cell_cop = ((model.fc_Cfuel + model.co2_price * model.fc_pco2) * model.fuel_gas_flow[t] * (model.Dt ))
 
         # 3.9
-        boiler_cop = ((model.boiler_Cfuel + model.co2_price * model.boiler_pco2) * model.boiler_gas_flow[t] * (model.Dt / 3600.0))
+        boiler_cop = ((model.boiler_Cfuel + model.co2_price * model.boiler_pco2) * model.boiler_gas_flow[t] * (model.Dt ))
 
         # 3.7
         heat_pump_cop = ((model.hp_Cfuel + model.co2_price * model.hp_pco2) * 
-                        (model.heat_pump_space_heat[t] / model.hp_h_cop) * (model.Dt / 3600.0))
+                        (model.heat_pump_space_heat[t] / model.hp_h_cop) * (model.Dt))
 
         total_cop += fuel_cell_cop + boiler_cop + heat_pump_cop
 
     # objective function 2.1a
     return conversion_capital + storage_capital + total_cop
 
-model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
+model.obj= pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
 
 
 # CONSTRAINT 2.1b 
@@ -258,30 +253,7 @@ def pv_solar_electricity_rule(model, t):
     return model.pv_electricity[t] <= (model.pv_h_el * model.pv_h_pr * (model.radiation[t] / 1000.0) * (model.pv_capacity/model.pv_p))
 model.pv_solar_electricity = pyomo.Constraint(model.T, rule=pv_solar_electricity_rule)
 
-# 3.4
-#Tcoll_series =  
-#Tamb_series  =  
-
-#def Tcoll_init(model, t):
-#    return float(Tcoll_series[t])
-
-#def Tamb_init(model, t):
-#    return float(Tamb_series[t])
-
-#model.Tcoll = pyomo.Param(model.T, initialize=Tcoll_init, domain=pyomo.Reals)
-#model.Tamb  = pyomo.Param(model.T, initialize=Tamb_init,  domain=pyomo.Reals)
-
-#def solar_thermal_heat(model, t):
-#    return (model.solar_space_heat[t] + model.solar_hot_water[t]) <= ((model.st_h * model.radiation[t] - model.st_K * 
-#        (model.Tcoll[t] - model.Tamb[t])) * (model.solar_capacity / model.st_p))
-#model.solar_thermal_split = pyomo.Constraint(model.T, rule=solar_thermal_heat)
-
-
-# CONSTRAINT 2.1d
-
-# CONSTRAINT 2.1e and 2.1f
-# Battery
-
+# 3.10
 def battery_charge_power_limit_rule(model, t):
     return model.battery_charge_power[t] <= model.battery_p_plus * model.battery_capacity
 model.battery_charge_power_limit = pyomo.Constraint(model.T, rule=battery_charge_power_limit_rule)
@@ -291,6 +263,93 @@ def battery_discharge_power_limit_rule(model, t):
 model.battery_discharge_power_limit = pyomo.Constraint(model.T, rule=battery_discharge_power_limit_rule)
 
 
+# ELECTRICITY DEMAND  
+electricity_demand = pd.read_csv("Richardson.csv", parse_dates=["timestamp"])
+electricity_demand = electricity_demand.set_index("timestamp").resample("h").mean()
+assert len(electricity_demand) == 8760
+electricity_load = electricity_demand["load_W"].values  # [W]
+
+def L_electricity_init(model, t):
+    return float(electricity_load[t])
+model.L_electricity = pyomo.Param(model.T, initialize=L_electricity_init,domain=pyomo.NonNegativeReals)
+
+
+# DHW DEMAND 
+dhw_demand = pd.read_csv("DHW.csv", parse_dates=["timestamp"])
+dhw_demand = dhw_demand.set_index("timestamp").resample("h").mean()
+assert len(dhw_demand) == 8760
+dhw_load = dhw_demand["dhw_W"].values   
+
+def L_dhw_init(model, t):
+    return float(dhw_load[t])
+model.L_dhw = pyomo.Param(model.T,initialize=L_dhw_init, domain=pyomo.NonNegativeReals)
+
+
+# SPACE HEAT DEMAND
+sph_demand = pd.read_csv("SPACE_HEAT.csv", parse_dates=["timestamp"])
+sph_demand = sph_demand.set_index("timestamp").resample("h").mean()
+assert len(sph_demand) == 8760
+sph_load = sph_demand["Q_space_W"].values  # [W]
+
+def L_sph_init(model, t):
+    return float(sph_load[t])
+model.L_sph = pyomo.Param(model.T,initialize=L_sph_init, domain=pyomo.NonNegativeReals)
+
+
+# 3.4
+temperature_demand = pd.read_csv("TEMPERATURES.csv", parse_dates=["timestamp"])
+temperature_demand = temperature_demand.set_index("timestamp").resample("h").mean().iloc[:8760]
+
+Tamb_series = temperature_demand["Tamb_C"].values
+Tcoll_series = temperature_demand["Tcoll_C"].values
+
+def Tamb_init(m, t):
+    return float(Tamb_series[t])
+
+def Tcoll_init(m, t):
+    return float(Tcoll_series[t])
+
+model.Tamb = pyomo.Param(model.T, initialize=Tamb_init, domain=pyomo.Reals)
+model.Tcoll = pyomo.Param(model.T, initialize=Tcoll_init, domain=pyomo.Reals)
+
+def solar_thermal_heat(model, t):
+    return (model.solar_space_heat[t] + model.solar_hot_water[t]) <= ((model.st_h * model.radiation[t] - model.st_K * 
+        (model.Tcoll[t] - model.Tamb[t])) * (model.solar_capacity / model.st_p))
+model.solar_thermal_split = pyomo.Constraint(model.T, rule=solar_thermal_heat)
 
 
 
+#-----------------------------
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Solver
+solver = SolverFactory("gurobi")
+
+results = solver.solve(model, tee=True)  
+model.solutions.load_from(results)
+
+print(results.solver.status)
+print(results.solver.termination_condition)
+print(pyomo.value(model.obj))
