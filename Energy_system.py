@@ -2,120 +2,127 @@
 import pyomo.environ as pyomo 
 import numpy as np
 import pandas as pd
+import math
 from math import pi
 from pyomo.environ import SolverFactory
-
 
 # initialize the model
 model = pyomo.ConcreteModel()
 # Time 
-model.T = pyomo.Set(initialize=range(8760)) 
-
+model.T = pyomo.Set(initialize=range(500)) 
+eps = np.finfo(float).eps
 
 # SOLAR RADIATION DATA FROM CSV FILE
 data = pd.read_csv("SOLAR_DATA.csv", parse_dates=["datetime"])
 data = data.set_index("datetime")
-ghi_hourly_values = data["GHI"].values 
+ghi_hourly_values = data["GHI"].values[:8760]
 
-def radiation_init(model, t):
+def radiation_initialize(model, t):
     return float(ghi_hourly_values[t])
-
-model.radiation = pyomo.Param(model.T, initialize=radiation_init, domain=pyomo.NonNegativeReals)
-print("Solar radiation data loaded successfully")
+model.I_t = pyomo.Param(model.T, initialize=radiation_initialize, domain=pyomo.NonNegativeReals)
 
 
 # ELECTRICITY DEMAND  
 electricity_demand = pd.read_csv("Richardson.csv", parse_dates=["timestamp"])
 electricity_demand = electricity_demand.set_index("timestamp").resample("h").mean()
 assert len(electricity_demand) == 8760
-electricity_load = electricity_demand["load_W"].values  # [W]
+electricity_load = electricity_demand["load_W"].values[:8760]
 
-def L_electricity_init(model, t):
+def L_electricity_initialize(model, t):
     return float(electricity_load[t])
-model.L_electricity = pyomo.Param(model.T, initialize=L_electricity_init,domain=pyomo.NonNegativeReals)
+model.L_electricity = pyomo.Param(model.T, initialize=L_electricity_initialize,domain=pyomo.NonNegativeReals)
 
 
 # DHW DEMAND 
 dhw_demand = pd.read_csv("DHW.csv", parse_dates=["timestamp"])
 dhw_demand = dhw_demand.set_index("timestamp").resample("h").mean()
-assert len(dhw_demand) == 8760
-dhw_load = dhw_demand["dhw_W"].values   
+dhw_load = dhw_demand["dhw_W"].values[:8760]
 
-def L_dhw_init(model, t):
+def L_dhw_initialize(model, t):
     return float(dhw_load[t])
-model.L_dhw = pyomo.Param(model.T,initialize=L_dhw_init, domain=pyomo.NonNegativeReals)
+model.L_dhw = pyomo.Param(model.T, initialize=L_dhw_initialize, domain=pyomo.NonNegativeReals)
 
 
 # SPACE HEAT DEMAND
 sph_demand = pd.read_csv("SPACE_HEAT.csv", parse_dates=["timestamp"])
 sph_demand = sph_demand.set_index("timestamp").resample("h").mean()
-assert len(sph_demand) == 8760
-sph_load = sph_demand["Q_space_W"].values  # [W]
+sph_load = sph_demand["Q_space_W"].values[:8760]
 
-def L_sph_init(model, t):
+def L_sph_initialize(model, t):
     return float(sph_load[t])
-model.L_sph = pyomo.Param(model.T,initialize=L_sph_init, domain=pyomo.NonNegativeReals)
+model.L_sph = pyomo.Param(model.T, initialize=L_sph_initialize, domain=pyomo.NonNegativeReals)
 
 
-# 3.4
+# TEMPERATURE DATA
 temperature_demand = pd.read_csv("TEMPERATURES.csv", parse_dates=["timestamp"])
 temperature_demand = temperature_demand.set_index("timestamp").resample("h").mean().iloc[:8760]
-
 Tamb_series = temperature_demand["Tamb_C"].values
 Tcoll_series = temperature_demand["Tcoll_C"].values
 
-def Tamb_init(m, t):
-    return float(Tamb_series[t])
+def Tamb_initialize(m, t):
+    return float(Tamb_series[t]) + 273.15   
+model.T_amb = pyomo.Param(model.T, initialize=Tamb_initialize, domain=pyomo.Reals)
 
-def Tcoll_init(m, t):
+def Tcoll_initialize(m, t):
     return float(Tcoll_series[t])
+model.T_coll = pyomo.Param(model.T, initialize=Tcoll_initialize, domain=pyomo.Reals)
 
-model.Tamb = pyomo.Param(model.T, initialize=Tamb_init, domain=pyomo.Reals)
-model.Tcoll = pyomo.Param(model.T, initialize=Tcoll_init, domain=pyomo.Reals)
-
-
+print("ALL DATA LOADED")
 
 # Decision Variables
-# Cogeneration fuel cell
-model.fuel_cell_chemical_capacity = pyomo.Var(domain=pyomo.NonNegativeReals)
-model.fuel_gas_flow = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.fuel_space_heat = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.fuel_hot_water = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.fuel_electricity = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  
+# Fuel Cell
+model.x_gas_fc = pyomo.Var(domain=pyomo.NonNegativeReals) 
+model.x_gas_in_fc = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)      
+model.x_sph_out_fc = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)     
+model.x_dhw_out_fc = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)     
+model.x_el_out_fc = pyomo.Var(model.T, domain=pyomo.NonNegativeReals) 
 
-# Photovoltaic system
-model.pv_capacity = pyomo.Var(domain=pyomo.NonNegativeReals)
-model.pv_electricity = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+# PV
+model.x_el_pv = pyomo.Var(domain=pyomo.NonNegativeReals) 
+model.x_el_out_pv = pyomo.Var(model.T, domain=pyomo.NonNegativeReals) 
 
-# Solar thermal system
-model.solar_capacity = pyomo.Var(domain=pyomo.NonNegativeReals)
-model.solar_space_heat = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.solar_hot_water = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+# Solar Thermal
+model.x_th_st = pyomo.Var(domain=pyomo.NonNegativeReals) 
+model.x_sph_out_st = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)      
+model.x_dhw_out_st = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  
 
-# Heat pump
-model.heat_pump_capacity = pyomo.Var(domain=pyomo.NonNegativeReals)
-model.heat_pump_space_heat = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+# Heat Pump
+model.x_el_hp = pyomo.Var(domain=pyomo.NonNegativeReals)  
+model.x_sph_out_hp = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
 
 # Boiler
-model.boiler_capacity = pyomo.Var(domain=pyomo.NonNegativeReals)
-model.boiler_gas_flow = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.boiler_space_heat = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.boiler_hot_water = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+model.x_gas_boiler = pyomo.Var(domain=pyomo.NonNegativeReals) 
+model.x_gas_in_boiler = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)   
+model.x_sph_out_boiler = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  
+model.x_dhw_out_boiler = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  
 
-# Battery storage
-model.battery_capacity = pyomo.Var(domain=pyomo.NonNegativeReals)
-model.battery_charge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.battery_discharge_power = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+# Battery
+model.y_el_battery = pyomo.Var(domain=pyomo.NonNegativeReals) 
+model.y_el_in_battery = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)    
+model.y_el_out_battery = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)   
 
-# Heat tank storage
-model.heat_store_height = pyomo.Var(domain=pyomo.NonNegativeReals)
-model.heat_store_net_flow = pyomo.Var(model.T, domain=pyomo.Reals)
+# Heat Tank  
+model.y_h_tank = pyomo.Var(domain=pyomo.NonNegativeReals)  
+model.y_dhw_net_tank = pyomo.Var(model.T, domain=pyomo.Reals) 
 
-print("Decision variables initialized successfully")
+# Grid  
+model.el_grid_import = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)   
+model.el_grid_export = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)   
+
+# 3.13
+model.T_bdg = pyomo.Var(model.T, domain=pyomo.Reals)
+
+# 3.14
+model.dT = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+
+print("DECISION VARIABLES OK")
 
 # Parameters - Table 4 - Table 5
-# Conversion Technologies
 
+model.Dt = pyomo.Param(initialize=3600)   
+model.co2_price = pyomo.Param(initialize=0.06)
+ 
+# Conversion Technologies
 # Fuel Cell Parameters
 model.fc_Cinv = pyomo.Param(initialize=4000)   
 model.fc_Comex = pyomo.Param(initialize=200)   
@@ -164,7 +171,6 @@ model.boiler_h = pyomo.Param(initialize=0.95)
 model.boiler_pco2 = pyomo.Param(initialize=0.179)   
 
 # Storage Technologies
-
 # Battery Parameters
 model.battery_Cinv = pyomo.Param(initialize=1000)   
 model.battery_Tlife = pyomo.Param(initialize=9)   
@@ -174,7 +180,7 @@ model.battery_E = pyomo.Param(initialize=0.05)
 model.battery_mo = pyomo.Param(initialize=0.20)   
 model.battery_p_plus = pyomo.Param(initialize=0.58)   
 model.battery_p_minus = pyomo.Param(initialize=1.00)   
-model.battery_yo = pyomo.Param(initialize=1.00)  
+model.battery_yo  = pyomo.Param(initialize=1.00)  
 model.battery_yT = pyomo.Param(initialize=1.00)  
 #model.battery_h_plus = pyomo.Param(initialize=0.959)  
 #model.battery_h_minus = pyomo.Param(initialize=0.959) 
@@ -197,20 +203,22 @@ model.heat_store_yo = pyomo.Param(initialize=0.50)
 model.heat_store_yT = pyomo.Param(initialize=0.50)   
 model.heat_store_mo = pyomo.Param(initialize=0.50)   
 
-# Time parameter
-model.Dt = pyomo.Param(initialize=3600)   
-model.co2_price = pyomo.Param(initialize=0.06)   
+# 3.14
+model.T_comfort = pyomo.Param(initialize=296.15)  # 23°C  
+model.T_comfort_band = pyomo.Param(initialize=1.0)  # ±1 K comfort zone
+model.c_T_penalty = pyomo.Param(initialize=10)  
 
-print("Parameters initialized successfully")
+model.T_min = pyomo.Param(initialize=model.T_comfort - model.T_comfort_band)
+model.T_max = pyomo.Param(initialize=model.T_comfort + model.T_comfort_band)
 
-# Heat store capacity and heat loss 3.11
+print("PARAMETERS OK")
 
+# EQUATIONS
 # Heat Store
 # 3.11
 def heat_store_capacity_rule(model):
-    return (model.heat_store_p * (model.heat_store_Cp / 3600) * 
-        (model.heat_store_Thot - model.heat_store_Tcold) * pi * 
-        ((model.heat_store_F / 2.0)**2) * model.heat_store_height)    
+    return (model.heat_store_p * (model.heat_store_Cp) * 
+        (model.heat_store_Thot - model.heat_store_Tcold) * pi * ((model.heat_store_F / 2.0)**2) * model.y_h_tank)    
 model.heat_store_capacity = pyomo.Expression(rule=heat_store_capacity_rule)
 
 # M1 3.11
@@ -221,8 +229,8 @@ model.heat_store_m1 = pyomo.Expression(rule=heat_store_m1_rule)
 
 # M2 3.11
 def heat_store_m2_rule(model):
-    return (pi * model.heat_store_U * (((model.heat_store_Thot - model.heat_store_Tcold)/2.0) - model.heat_store_Tbdg) * 
-            model.heat_store_F * model.heat_store_height)
+    return (pi * model.heat_store_U * (((model.heat_store_Thot - model.heat_store_Tcold)/2.0) - 
+            model.heat_store_Tbdg) * model.heat_store_F * model.y_h_tank)
 model.heat_store_m2 = pyomo.Expression(rule=heat_store_m2_rule)
 
 
@@ -231,107 +239,238 @@ model.heat_store_m2 = pyomo.Expression(rule=heat_store_m2_rule)
 def objective_rule(model):
     # Cx
     conversion_capital = (
-        model.fc_Ccap * model.fc_h_el * model.fuel_cell_chemical_capacity +
-        model.pv_Ccap * model.pv_capacity +
-        model.st_Ccap * model.solar_capacity +
-        model.hp_Ccap * model.heat_pump_capacity +
-        model.boiler_Ccap * model.boiler_h * model.boiler_capacity
+        model.fc_Ccap * model.fc_h_el * model.x_gas_fc + 
+        model.pv_Ccap * model.x_el_pv +
+        model.st_Ccap * model.x_th_st + 
+        model.hp_Ccap * model.x_el_hp + 
+        model.boiler_Ccap * model.boiler_h * model.x_gas_boiler 
     )
        
-    #y
-    heat_store_capacity = model.heat_store_capacity
-    heat_store_capital = model.heat_store_Ccap * heat_store_capacity
-    battery_capital = model.battery_Ccap * model.battery_capacity
+    #Cy
+    storage_capital = (
+        model.battery_Ccap * model.y_el_battery +
+        model.heat_store_Ccap * model.y_h_tank        
+    )
     
-    # Cy
-    storage_capital = battery_capital + heat_store_capital
+    # 3.14
+    penalty = model.c_T_penalty * sum(model.dT[t] for t in model.T)
     
     # Sum
     total_cop = 0.0
     for t in model.T:
 
         # 3.2
-        fuel_cell_cop = ((model.fc_Cfuel + model.co2_price * model.fc_pco2) * model.fuel_gas_flow[t] * (model.Dt ))
+        fuel_cell_cop = ((model.fc_Cfuel + model.co2_price * model.fc_pco2) * model.x_gas_in_fc[t] * model.Dt)
 
         # 3.9
-        boiler_cop = ((model.boiler_Cfuel + model.co2_price * model.boiler_pco2) * model.boiler_gas_flow[t] * (model.Dt ))
+        boiler_cop = ((model.boiler_Cfuel + model.co2_price * model.boiler_pco2) * model.x_gas_in_boiler[t] * model.Dt)
 
         # 3.7
-        heat_pump_cop = ((model.hp_Cfuel + model.co2_price * model.hp_pco2) * 
-                        (model.heat_pump_space_heat[t] / model.hp_h_cop) * (model.Dt))
+        heat_pump_cop = ((model.hp_Cfuel + model.co2_price * model.hp_pco2) * (model.x_sph_out_hp[t] / model.hp_h_cop) * model.Dt)
 
-        total_cop += fuel_cell_cop + boiler_cop + heat_pump_cop
-
-    return conversion_capital + storage_capital + total_cop
-
+        total_cop += fuel_cell_cop + boiler_cop + heat_pump_cop + penalty
+    
+    return conversion_capital + storage_capital + total_cop + penalty
 model.obj= pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
 
 
 # 3.1
-def fuel_cell_min_threshold(model, t):
-    return model.fc_k * model.fuel_cell_chemical_capacity <= model.fuel_gas_flow[t]
-model.fuel_cell_min = pyomo.Constraint(model.T, rule=fuel_cell_min_threshold)
+def fc_min_load(model, t):
+    return model.fc_k * model.x_gas_fc <= model.x_gas_in_fc[t]
+model.constraint_fc_min = pyomo.Constraint(model.T, rule=fc_min_load)
 
 # 3.1
-def fuel_cell_max_threshold(model, t):
-    return model.fuel_gas_flow[t] <= model.fuel_cell_chemical_capacity
-model.fuel_cell_max = pyomo.Constraint(model.T, rule=fuel_cell_max_threshold)
+def fc_max_load(model, t):
+    return model.x_gas_in_fc[t] <= model.x_gas_fc
+model.constraint_fc_max = pyomo.Constraint(model.T, rule=fc_max_load)
 
 # 3.1
-def fuel_cell_electricity_from_fuel_ub(model, t):
-    return model.fuel_electricity[t] <= model.fc_h_el * model.fuel_gas_flow[t]
-model.fuel_cell_elec_from_fuel_ub = pyomo.Constraint(model.T, rule=fuel_cell_electricity_from_fuel_ub)
+def fc_electricity_ub(model, t):
+    return model.x_el_out_fc[t] <= model.fc_h_el * model.x_gas_in_fc[t]
+model.constraint_fc_elec = pyomo.Constraint(model.T, rule=fc_electricity_ub)
 
 # 3.1
-def fuel_cell_heat_from_fuel_ub(model, t):
-    return (model.fuel_space_heat[t] + model.fuel_hot_water[t]) <= model.fc_h_th * model.fuel_gas_flow[t]
-model.fuel_cell_heat_from_fuel_ub = pyomo.Constraint(model.T, rule=fuel_cell_heat_from_fuel_ub)
+def fc_heat_ub(model, t):
+        return (model.x_sph_out_fc[t] + model.x_dhw_out_fc[t]) <= model.fc_h_th * model.x_gas_in_fc[t]
+model.constraint_fc_heat = pyomo.Constraint(model.T, rule=fc_heat_ub)
 
 # 3.3
-def pv_solar_electricity_rule(model, t):
-    return model.pv_electricity[t] <= (model.pv_h_el * model.pv_h_pr * (model.radiation[t] / 1000.0) * (model.pv_capacity/model.pv_p))
-model.pv_solar_electricity = pyomo.Constraint(model.T, rule=pv_solar_electricity_rule)
+def pv_electricity_ub(model, t):
+    return model.x_el_out_pv[t] <= (model.pv_h_el * model.pv_h_pr * (model.I_t[t] / 1000.0) * (model.x_el_pv / model.pv_p))
+model.constraint_pv_elec = pyomo.Constraint(model.T, rule=pv_electricity_ub)
 
 # 3.4
-def solar_thermal_heat(model, t):
-    return (model.solar_space_heat[t] + model.solar_hot_water[t]) <= ((model.st_h * model.radiation[t] - model.st_K * 
-        (model.Tcoll[t] - model.Tamb[t])) * (model.solar_capacity / model.st_p))
-model.solar_thermal_split = pyomo.Constraint(model.T, rule=solar_thermal_heat)
+def st_heat_ub(model, t):
+    return (model.x_sph_out_st[t] + model.x_dhw_out_st[t]) <= ((model.st_h * model.I_t[t] - model.st_K * 
+        (model.T_coll[t] - model.T_amb[t])) * (model.x_th_st / model.st_p))
+model.constraint_st_heat = pyomo.Constraint(model.T, rule=st_heat_ub)
 
 # 3.6
-def heat_pump_space_heat_rule(model, t):
-    return model.heat_pump_space_heat[t] <= model.hp_h_cop * model.heat_pump_capacity
-model.hp_space_heat = pyomo.Constraint(model.T, rule=heat_pump_space_heat_rule)
+def hp_space_heat_ub(model, t):
+    return model.x_sph_out_hp[t] <= model.hp_h_cop * model.x_el_hp
+model.constraint_hp_sph = pyomo.Constraint(model.T, rule=hp_space_heat_ub)
 
 # 3.8
-def boiler_max_threshold(model, t):
-    return model.boiler_gas_flow[t] <= model.boiler_capacity
-model.boiler_max = pyomo.Constraint(model.T, rule=boiler_max_threshold)
+def boiler_max_load(model, t):
+    return model.x_gas_in_boiler[t] <= model.x_gas_boiler
+model.constraint_boiler_max = pyomo.Constraint(model.T, rule=boiler_max_load)
 
 # 3.8
-def boiler_heat_from_gas_ub(model, t):
-    return (model.boiler_space_heat[t] + model.boiler_hot_water[t]) <= model.boiler_h * model.boiler_gas_flow[t]
-model.boiler_heat_from_gas_ub = pyomo.Constraint(model.T, rule=boiler_heat_from_gas_ub)
+def boiler_heat_ub(model, t):
+    return (model.x_sph_out_boiler[t] + model.x_dhw_out_boiler[t]) <= model.boiler_h * model.x_gas_in_boiler[t]
+model.constraint_boiler_heat = pyomo.Constraint(model.T, rule=boiler_heat_ub)
+
+print("CONVERSION CONSTRAINTS OK")
 
 # 3.10
-def battery_charge_power_limit_rule(model, t):
-    return model.battery_charge_power[t] <= model.battery_p_plus * model.battery_capacity
-model.battery_charge_power_limit = pyomo.Constraint(model.T, rule=battery_charge_power_limit_rule)
+def battery_charge_ub(model, t):
+    return model.y_el_in_battery[t] <= model.battery_p_plus * model.y_el_battery
+model.constraint_battery_ch_ub = pyomo.Constraint(model.T, rule=battery_charge_ub)
 
 # 3.10
-def battery_discharge_power_limit_rule(model, t):
-    return model.battery_discharge_power[t] <= model.battery_p_minus * model.battery_capacity
-model.battery_discharge_power_limit = pyomo.Constraint(model.T, rule=battery_discharge_power_limit_rule)
+def battery_discharge_ub(model, t):
+    return model.y_el_out_battery[t] <= model.battery_p_minus * model.y_el_battery
+model.constraint_battery_dis_ub = pyomo.Constraint(model.T, rule=battery_discharge_ub)
 
-#-----------------------------
+# 3.10
+def battery_soc_lb(model, t):
 
-# Solver
+    soc = sum(
+        (model.battery_E ** (t - tau)) * (model.battery_h_plus *  model.y_el_in_battery[tau] - model.battery_h_minus * model.y_el_out_battery[tau]) * model.Dt
+        for tau in range(min(t + 1, len(model.T)))
+    ) + (model.battery_E ** t) * model.battery_yo 
+    
+    return model.battery_mo * model.y_el_battery <= soc
+model.constraint_battery_soc_lb = pyomo.Constraint(model.T, rule=battery_soc_lb)
+
+# 3.10
+def battery_soc_ub(model, t):
+    soc = sum(
+        (model.battery_E ** (t - tau)) * (model.battery_h_plus *  model.y_el_in_battery[tau] - model.battery_h_minus * model.y_el_out_battery[tau]) * model.Dt
+        for tau in range(min(t + 1, len(model.T)))
+    ) + (model.battery_E ** t) * model.battery_yo 
+    
+    return soc <= model.y_el_battery
+model.constraint_battery_soc_ub = pyomo.Constraint(model.T, rule=battery_soc_ub)
+
+# 3.10
+def battery_soc_terminal(model):
+
+    T = len(model.T) - 1 
+    soc = sum((model.battery_E ** (T - tau)) * (model.battery_h_plus * model.y_el_in_battery[tau] - model.battery_h_minus * model.y_el_out_battery[tau]) * model.Dt
+        for tau in model.T
+    ) + (model.battery_E ** T) * model.battery_yo
+    
+    return soc == model.battery_yT
+model.constraint_battery_soc_term = pyomo.Constraint(rule=battery_soc_terminal)
+ 
+# 3.10
+def battery_cycling_limit(model):
+    T = len(model.T)
+    total_discharge = sum(model.y_el_out_battery[t] for t in model.T)
+    max_discharge = (T / 24.0) * model.battery_h_minus * (1 - model.battery_mo) * model.y_el_battery
+
+    return total_discharge <= max_discharge
+model.constraint_battery_cycling = pyomo.Constraint(rule=battery_cycling_limit)
+
+# 3.12
+def tank_soc_ub(model, t):
+    soc = sum(
+        model.y_dhw_net_tank[tau] - model.heat_store_m1 - model.heat_store_m2
+        for tau in range(min(t + 1, len(model.T)))
+    ) * model.Dt + model.heat_store_yo  
+    
+    return soc <= model.heat_store_capacity
+model.constraint_tank_soc_ub = pyomo.Constraint(model.T, rule=tank_soc_ub)
+
+# 3.12
+def tank_soc_terminal(model):
+    soc_final = sum(
+        model.y_dhw_net_tank[tau] - model.heat_store_m1 - model.heat_store_m2
+        for tau in model.T
+    ) * model.Dt + model.heat_store_yo  
+    
+    return soc_final == model.heat_store_yT
+model.constraint_tank_soc_term = pyomo.Constraint(rule=tank_soc_terminal)
+
+
+# 3.13
+model.U = pyomo.Param(initialize=168.0)
+model.C = pyomo.Param(initialize=3.1104e7)
+
+def tau_initialize(model):
+    return model.C / model.U
+model.tau = pyomo.Param(initialize=tau_initialize)
+
+def exponential_initialize(model):
+    return math.exp(-model.Dt / model.tau)
+model.exponential = pyomo.Param(initialize=exponential_initialize)
+
+def one_minus_exponential_initialize(model):
+    return 1.0 - model.exponential
+model.one_minus_exponential = pyomo.Param(initialize=one_minus_exponential_initialize)
+
+def Q_plus(model, t):
+    return (model.x_sph_out_hp[t] + model.x_sph_out_fc[t] + model.x_sph_out_st[t] + model.x_sph_out_boiler[t])
+model.Q_plus = pyomo.Expression(model.T, rule=Q_plus)
+
+def Q_minus(model, t):
+    return 0.0
+model.Q_minus = pyomo.Expression(model.T, rule=Q_minus)
+
+def building_temperature_rule(model, t):
+    if t == 0:
+        return model.T_bdg[t] == model.T_amb[t]
+    else:
+        return (model.T_bdg[t] == 
+            model.exponential * model.T_bdg[t - 1] + model.one_minus_exponential * model.T_amb[t] +
+            (model.one_minus_exponential / model.U) * (model.Q_plus[t] - model.Q_minus[t]))
+
+model.building_temperature = pyomo.Constraint(model.T, rule=building_temperature_rule)
+
+# 3.14
+def comfort_lower_bound(model, t):
+    return model.dT[t] >= model.T_bdg[t] - model.T_max
+model.constraint_comfort_lower = pyomo.Constraint(model.T, rule=comfort_lower_bound)
+
+# 3.14
+def comfort_upper_bound(model, t):
+    return model.dT[t] >= model.T_min - model.T_bdg[t]
+model.constraint_comfort_upper = pyomo.Constraint(model.T, rule=comfort_upper_bound)
+
+# 3.14
+def comfort_non_negative_rule(model, t):
+    return model.dT[t] >= 0
+model.constraint_comfort_non_negative = pyomo.Constraint(model.T, rule=comfort_non_negative_rule)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# GUROBI
+print("\nSOLVING")
 solver = SolverFactory("gurobi")
-
-results = solver.solve(model, tee=True)  
-model.solutions.load_from(results)
-
-print(results.solver.status)
-print(results.solver.termination_condition)
-print(pyomo.value(model.obj))
+results = solver.solve(model, tee=True)
+print("OPTIMIZATION RESULTS")
+print(f"Solver status: {results.solver.status}")
+print(f"Termination condition: {results.solver.termination_condition}")
+print(f"Total annualized cost: {pyomo.value(model.obj):.2f} CHF")
+ 
  
