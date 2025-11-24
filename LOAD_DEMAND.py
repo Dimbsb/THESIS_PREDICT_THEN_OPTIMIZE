@@ -29,9 +29,9 @@ def generate_hourly_el_load(csv_out='RICHARDSON.csv', nb_occ=3, seed=1, timestep
     if len(load) != 8760:
         raise RuntimeError(f'ERROR: EXPECTED 8760 VALUES')
 
-    timestamps = pd.date_range(start='2019-01-01', periods=8760, freq='h')
+    datetime = pd.date_range(start='2019-01-01', periods=8760, freq='h')
 
-    df = pd.DataFrame({'timestamp': timestamps,'load_W': load})
+    df = pd.DataFrame({'datetime': datetime,'load_W': load})
     df.to_csv(csv_out, index=False)
     print(f'Wrote {len(df)} rows to {csv_out}')
 
@@ -77,7 +77,7 @@ def generate_hourly_dhw_load(csv_out='DHW.csv', nb_occ=3, seed=1, mean_drawoff_v
         raise RuntimeError(f'ERROR: EXPECTED 8760 VALUES')
     
     df_out = dhw_hourly.reset_index()
-    df_out.columns = ['timestamp', 'dhw_W']
+    df_out.columns = ['datetime', 'dhw_W']
     
     df_out.to_csv(csv_out, index=False)
     print(f'Wrote {len(df_out)} rows to {csv_out}')
@@ -100,12 +100,11 @@ def generate_temperature_data(csv_out='TEMPERATURES.csv', seed=42):
     # collector: Tamb + 0 to 10°C
     Tcoll = np.random.uniform(0, 10, ts) + Tamb
      
-    timestamps = pd.date_range(start='2019-01-01', periods=ts, freq='h')
-    df = pd.DataFrame({'datetime': timestamps, 'Tamb_C': Tamb, 'Tcoll_C': Tcoll,})
+    datetime = pd.date_range(start='2019-01-01', periods=ts, freq='h')
+    df = pd.DataFrame({'datetime': datetime, 'Tamb_C': Tamb, 'Tcoll_C': Tcoll,})
     
     df.to_csv(csv_out, index=False)
     print(f'Wrote {len(df)} rows to {csv_out}')
 if __name__ == '__main__':
     generate_temperature_data()
     
- 
