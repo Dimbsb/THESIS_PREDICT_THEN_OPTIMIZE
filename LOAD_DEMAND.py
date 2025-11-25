@@ -37,11 +37,11 @@ def generate_hourly_el_load(csv_out='RICHARDSON.csv', nb_occ=3, seed=1, timestep
     print(f'Wrote {len(df)} rows to {csv_out}')
 
 
-def generate_multiple_el(n=10, base_seed=1, out_dir='generated_csvs', nb_occ=3, timestep=3600):
-    os.makedirs(out_dir, exist_ok=True)
+def generate_multiple_el(n=10, base_seed=1, nb_occ=3, timestep=3600):
+    
     for i in range(n):
         seed = base_seed + i
-        csv_out = os.path.join(out_dir, f'RICHARDSON_{seed}.csv')
+        csv_out = os.path.join( f'RICHARDSON_{seed}.csv')
         generate_hourly_el_load(csv_out=csv_out, nb_occ=nb_occ, seed=seed, timestep=timestep)
 
 
@@ -87,11 +87,11 @@ def generate_hourly_dhw_load(csv_out='DHW.csv', nb_occ=3, seed=1, mean_drawoff_v
     df_out.to_csv(csv_out, index=False)
     print(f'Wrote {len(df_out)} rows to {csv_out}')
 
-def generate_multiple_dhw(n=10, base_seed=1, out_dir='generated_csvs', nb_occ=3, mean_drawoff_vol_per_day=40, temp_dT=35):
-    os.makedirs(out_dir, exist_ok=True)
+def generate_multiple_dhw(n=10, base_seed=1 , nb_occ=3, mean_drawoff_vol_per_day=40, temp_dT=35):
+    
     for i in range(n):
         seed = base_seed + i
-        csv_out = os.path.join(out_dir, f'DHW_{seed}.csv')
+        csv_out = os.path.join( f'DHW_{seed}.csv')
         generate_hourly_dhw_load(csv_out=csv_out, nb_occ=nb_occ, seed=seed,
                                 mean_drawoff_vol_per_day=mean_drawoff_vol_per_day, temp_dT=temp_dT)
 
@@ -117,11 +117,11 @@ def generate_temperature_data(csv_out='TEMPERATURES.csv', seed=1):
     print(f'Wrote {len(df)} rows to {csv_out}')
     
     
-def generate_multiple_temps(n=10, base_seed=1, out_dir='generated_csvs'):
-    os.makedirs(out_dir, exist_ok=True)
+def generate_multiple_temps(n=10, base_seed=1):
+    
     for i in range(n):
         seed = base_seed + i
-        csv_out = os.path.join(out_dir, f'TEMPERATURES_{seed}.csv')
+        csv_out = os.path.join( f'TEMPERATURES_{seed}.csv')
         generate_temperature_data(csv_out=csv_out, seed=seed)
 
 
@@ -133,14 +133,13 @@ if __name__ == '__main__':
     
     n = 10
     base_seed = 1
-    out_dir = 'generated_csvs'
     nb_occ = 3
     timestep = 3600
     mean_drawoff_vol_per_day = 40
     temp_dT = 35
 
     print(f"Generating CSVs")
-    generate_multiple_el(n=n, base_seed=base_seed, out_dir=out_dir, nb_occ=nb_occ, timestep=timestep)
-    generate_multiple_dhw(n=n, base_seed=base_seed, out_dir=out_dir, nb_occ=nb_occ, mean_drawoff_vol_per_day=mean_drawoff_vol_per_day, temp_dT=temp_dT)
-    generate_multiple_temps(n=n, base_seed=base_seed, out_dir=out_dir)
+    generate_multiple_el(n=n, base_seed=base_seed, nb_occ=nb_occ, timestep=timestep)
+    generate_multiple_dhw(n=n, base_seed=base_seed,  nb_occ=nb_occ, mean_drawoff_vol_per_day=mean_drawoff_vol_per_day, temp_dT=temp_dT)
+    generate_multiple_temps(n=n, base_seed=base_seed)
     
