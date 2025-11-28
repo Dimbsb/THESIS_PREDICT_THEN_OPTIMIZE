@@ -1,0 +1,6 @@
+https://github.com/RWTH-EBC/richardsonpy
+
+https://github.com/RWTH-EBC/OpenDHW/tree/main/Examples
+
+
+https://re.jrc.ec.europa.eu/pvg_tools/en/#MR
