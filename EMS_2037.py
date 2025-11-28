@@ -174,7 +174,7 @@ model.battery_Cinv = pyomo.Param(initialize=1000)
 model.battery_Tlife = pyomo.Param(initialize=9)   
 model.battery_Ccap = pyomo.Param(initialize=128)   
 model.battery_h = pyomo.Param(initialize=0.92)   
-model.battery_E = pyomo.Param(initialize=0.95**(1.0/24.0))  
+model.battery_E = pyomo.Param(initialize=0.95*(1.0/24.0))  
 model.battery_mo = pyomo.Param(initialize=0.20)   
 model.battery_p_plus = pyomo.Param(initialize=0.58)   
 model.battery_p_minus = pyomo.Param(initialize=1.00)   
@@ -194,9 +194,9 @@ model.heat_store_F = pyomo.Param(initialize=0.80)
 model.heat_store_U = pyomo.Param(initialize=0.21)  
 model.heat_store_Cp = pyomo.Param(initialize=4.19e3)    
 model.heat_store_p = pyomo.Param(initialize=1000)   
-model.heat_store_Thot = pyomo.Param(initialize=60)   
-model.heat_store_Tcold = pyomo.Param(initialize=10)   
-model.heat_store_Tbdg = pyomo.Param(initialize=23)   
+model.heat_store_Thot = pyomo.Param(initialize=60+273)   
+model.heat_store_Tcold = pyomo.Param(initialize=10+273)   
+model.heat_store_Tbdg = pyomo.Param(initialize=23+273)   
 model.heat_store_yo = pyomo.Param(initialize=0.50)   
 model.heat_store_yT = pyomo.Param(initialize=0.50)   
 model.heat_store_mo = pyomo.Param(initialize=0.50)   
@@ -204,11 +204,10 @@ model.heat_store_mo = pyomo.Param(initialize=0.50)
 model.y_dhw_in_tank = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)   
 model.y_dhw_out_tank = pyomo.Var(model.T, domain=pyomo.NonNegativeReals) 
 
-# 3.14
-model.c_T_penalty = pyomo.Param(initialize=10)  
-model.c_comfort = pyomo.Param(initialize=1.0)
-model.T_min = pyomo.Param(initialize=295.15)
-model.T_max = pyomo.Param(initialize=297.15)
+# 3.14 
+model.c_T = pyomo.Param(initialize=1.0)
+model.T_min = pyomo.Param(initialize=295) #22°C
+model.T_max = pyomo.Param(initialize=297) #24°C
 
 print("PARAMETERS OK")
 
@@ -237,15 +236,16 @@ model.heat_store_m2 = pyomo.Expression(rule=heat_store_m2_rule)
 # 2.1a
 def objective_rule(model):
     # Cx
-    fc_capital = model.fc_Ccap * model.fc_h_el * model.x_gas_fc
-    pv_capital = model.pv_Ccap * model.x_el_pv
-    st_capital = model.st_Ccap * model.x_th_st
-    hp_capital = model.hp_Ccap * model.x_el_hp
-    boiler_capital = model.boiler_Ccap * model.boiler_h * model.x_gas_boiler
+    fc_capital = model.fc_Ccap * model.fc_h_el * (model.x_gas_fc / 1000)
+    pv_capital = model.pv_Ccap * (model.x_el_pv / 1000)
+    st_capital = model.st_Ccap * (model.x_th_st / 1000)
+    hp_capital = model.hp_Ccap * (model.x_el_hp / 1000)
+    boiler_capital = model.boiler_Ccap * model.boiler_h * (model.x_gas_boiler / 1000)
     
     #Cy
     battery_capital = model.battery_Ccap * (model.y_el_battery / 3.6e6)
-    tank_capital = model.heat_store_Ccap * model.y_h_tank
+    tank_capital = model.heat_store_Ccap * (model.heat_store_capacity / 3.6e6)
+
       
     total_capital = (fc_capital + pv_capital + st_capital + hp_capital + 
                     boiler_capital + battery_capital + tank_capital)
@@ -264,7 +264,7 @@ def objective_rule(model):
                        model.x_el_in_hp[t] * 
                        model.Dt / 3.6e6)
         
-        comfort_penalty = model.c_comfort * model.dT[t]
+        comfort_penalty = model.c_T * model.dT[t]
         
         total_operational += fc_fuel_cost + boiler_fuel_cost + hp_elec_cost + comfort_penalty
     
@@ -507,3 +507,4 @@ print("Heat Pump: ", pyomo.value(model.x_el_hp))
 print("Boiler: ", pyomo.value(model.x_gas_boiler))
 print("Battery: ", pyomo.value(model.y_el_battery))
 print("Heat Tank: ", pyomo.value(model.y_h_tank))
+ 
