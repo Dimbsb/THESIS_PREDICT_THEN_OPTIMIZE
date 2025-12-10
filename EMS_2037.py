@@ -536,6 +536,7 @@ model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
 
 
 
+
 # GUROBI
 solver = SolverFactory('gurobi')
 results = solver.solve(model, tee=True)
@@ -548,9 +549,8 @@ print("="*40)
 
 
 # 1. Fuel Cell
-fc_gas_kw = pyomo.value(model.x_gas_fc) / 1000         
-fc_el_kw = fc_gas_kw * model.fc_h_el                   
-print(f"Fuel Cell (Elec Out):   {fc_el_kw:.2f} kW (Gas In: {fc_gas_kw:.2f} kW)")
+fc_gas_kw = pyomo.value(model.x_gas_fc) / 1000                          
+print(f"Fuel Cell Capacity:     {fc_gas_kw:.2f} kW")
 
 # 2. PV
 pv_cap_kw = pyomo.value(model.x_el_pv) / 1000
@@ -561,9 +561,8 @@ st_area = pyomo.value(model.x_th_st)
 print(f"Solar Thermal Area:     {st_area:.2f} m²")
 
 # 4. Heat Pump
-hp_el_kw = pyomo.value(model.x_el_hp) / 1000          
-hp_th_kw = hp_el_kw * model.hp_h_cop                   
-print(f"Heat Pump (Elec In):    {hp_el_kw:.2f} kW (~{hp_th_kw:.2f} kW Thermal)")
+hp_el_kw = pyomo.value(model.x_el_hp) / 1000                
+print(f"Heat Pump Capacity:     {hp_el_kw:.2f} kW")
 
 # 5. Boiler
 boiler_kw = pyomo.value(model.x_gas_boiler) / 1000
