@@ -218,6 +218,9 @@ model.co2_price = pyomo.Param(initialize=0.06)
 print("PARAMETERS OK")
 
 
+
+print("BINARY OK")
+
 # 3.1 οκ
 def fc_min_load(model, t):
     return model.fc_k * model.x_gas_fc <= model.x_gas_in_fc[t]
@@ -474,7 +477,7 @@ model.constraint_dhw_net = pyomo.Constraint(model.T, rule=dhw_net_flow_rule)
 # ELECTRICITY BALANCE
 def electricity_balance_rule(model, t):
     supply = (model.x_el_out_fc[t] + model.x_el_out_pv[t] + model.y_el_out_battery[t])
-    demand = model.L_electricity[t] + model.x_el_in_hp[t] + model.y_el_in_battery[t]
+    demand = model.L_electricity[t] + model.y_el_in_battery[t]
     return supply == demand
 model.constraint_electricity_balance = pyomo.Constraint(model.T, rule=electricity_balance_rule)
 
@@ -488,8 +491,8 @@ model.constraint_space_heating_balance = pyomo.Constraint(model.T, rule=space_he
 
 # DHW BALANCE
 def dhw_balance_rule(model, t):
-    supply = (model.x_dhw_out_fc[t] + model.x_dhw_out_boiler[t] + model.x_dhw_out_st[t])
-    demand = model.L_dhw[t]
+    supply = (model.x_dhw_out_fc[t] + model.x_dhw_out_boiler[t] + model.x_dhw_out_st[t] + model.y_dhw_out_tank[t])
+    demand = model.L_dhw[t] + model.y_dhw_in_tank[t] 
     return supply + model.y_dhw_out_tank[t] - model.y_dhw_in_tank[t] == demand
 model.constraint_dhw_balance = pyomo.Constraint(model.T, rule=dhw_balance_rule)
 
