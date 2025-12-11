@@ -15,8 +15,7 @@ model.T = pyomo.Set(initialize=range(8760))
 eps = np.finfo(float).eps
 
 # SOLAR RADIATION DATA FROM CSV FILE
-data = pd.read_csv("SOLAR_DATA_FIXED.csv", parse_dates=["datetime"])
-data = data.set_index("datetime")
+data = pd.read_csv("SOLAR_DATA_FIXED.csv", parse_dates=["datetime"]).set_index("datetime")
 ghi_hourly_values = data["GHI"].values[:8760]
 
 def radiation_initialize(model, t):
@@ -205,8 +204,8 @@ model.C = pyomo.Param(initialize=15e6)
 
 # 3.14 
 model.c_T = pyomo.Param(initialize=10.0)
-model.T_min = pyomo.Param(initialize=20+273.15)  
-model.T_max = pyomo.Param(initialize=25+273.15) 
+model.T_min = pyomo.Param(initialize=18+273.15)  
+model.T_max = pyomo.Param(initialize=28+273.15) 
 
 # SUM
 model.SOC_el = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
@@ -218,45 +217,42 @@ model.co2_price = pyomo.Param(initialize=0.06)
 print("PARAMETERS OK")
 
 
-
-print("BINARY OK")
-
-# 3.1 οκ
+# 3.1 
 def fc_min_load(model, t):
     return model.fc_k * model.x_gas_fc <= model.x_gas_in_fc[t]
 model.constraint_fc_min = pyomo.Constraint(model.T, rule=fc_min_load)
 
-# 3.1 οκ
+# 3.1  
 def fc_max_load(model, t):
     return model.x_gas_in_fc[t] <= model.x_gas_fc
 model.constraint_fc_max = pyomo.Constraint(model.T, rule=fc_max_load)
 
-# 3.1 οκ
+# 3.1  
 def fc_electricity_ub(model, t):
     return model.x_el_out_fc[t] <= model.fc_h_el * model.x_gas_in_fc[t]
 model.constraint_fc_elec = pyomo.Constraint(model.T, rule=fc_electricity_ub)
 
-#3.1 οκ
+#3.1  
 def fc_electricity_lb(model, t):
     return  eps<= model.x_el_out_fc[t]  
 model.constraint_fc_elec_lb = pyomo.Constraint(model.T, rule=fc_electricity_lb)
 
-# 3.1 οκ
+# 3.1 
 def fc_heat_ub(model, t):
         return (model.x_sph_out_fc[t] + model.x_dhw_out_fc[t]) <= model.fc_h_th * model.x_gas_in_fc[t]
 model.constraint_fc_heat = pyomo.Constraint(model.T, rule=fc_heat_ub)
 
-# 3.3 οκ
+# 3.3  
 def pv_electricity_ub(model, t):
     return model.x_el_out_pv[t] <= (model.pv_h_el * model.pv_h_pr * (model.I_t[t] / 1000.0) * (model.x_el_pv / model.pv_p))
 model.constraint_pv_elec = pyomo.Constraint(model.T, rule=pv_electricity_ub)
 
-# 3.3 οκ
+# 3.3  
 def pv_electricity_lb(model, t):
     return eps <= model.x_el_out_pv[t]  
 model.constraint_pv_elec_lb = pyomo.Constraint(model.T, rule=pv_electricity_lb)
 
-# 3.4 οκ
+# 3.4 
 def st_heat_ub(model, t):
     return (model.x_sph_out_st[t] + model.x_dhw_out_st[t]) <= (((model.st_h * model.I_t[t]) - model.st_K * (model.T_coll[t] - model.T_amb[t])) * (model.x_th_st)) / model.st_p
 model.constraint_st_heat = pyomo.Constraint(model.T, rule=st_heat_ub)
@@ -500,6 +496,111 @@ model.constraint_dhw_balance = pyomo.Constraint(model.T, rule=dhw_balance_rule)
 print("LOAD BALANCE CONSTRAINTS OK")
 
 
+# lower bounds 
+min_cap_fc = 1000.0       
+min_cap_pv = 1000.0       
+min_cap_st = 1000.0       
+min_cap_hp = 1000.0       
+min_cap_boiler = 1000.0   
+min_cap_batt = 1.0 * 3.6e6  
+min_height_tank = 0.5    
+
+# Big M  
+Big_M = 40000   
+Big_M_Joules = 1e10  
+Big_M_meters = 10.0  
+
+# Binary Decision Variables 1 or 0 
+model.binary_fc = pyomo.Var(domain=pyomo.Binary)
+model.binary_pv = pyomo.Var(domain=pyomo.Binary)
+model.binary_st = pyomo.Var(domain=pyomo.Binary)
+model.binary_hp = pyomo.Var(domain=pyomo.Binary)
+model.binary_boiler = pyomo.Var(domain=pyomo.Binary)
+model.binary_batt = pyomo.Var(domain=pyomo.Binary)
+model.binary_tank = pyomo.Var(domain=pyomo.Binary)
+
+
+# BINARY CONSTRAINTS 
+# Big_M 
+# Fuel Cell
+def fc_bin_ub(model): 
+    return model.x_gas_fc <= Big_M * model.binary_fc
+model.c_fc_bin_ub = pyomo.Constraint(rule=fc_bin_ub)
+
+# PV
+def pv_bin_ub(model): 
+    return model.x_el_pv <= Big_M * model.binary_pv
+model.c_pv_bin_ub = pyomo.Constraint(rule=pv_bin_ub)
+
+# Solar Thermal
+def st_bin_ub(model): 
+    return model.x_th_st <= Big_M * model.binary_st
+model.c_st_bin_ub = pyomo.Constraint(rule=st_bin_ub)
+
+# Heat Pump
+def hp_bin_ub(model): 
+    return model.x_el_hp <= Big_M * model.binary_hp
+model.c_hp_bin_ub = pyomo.Constraint(rule=hp_bin_ub)
+
+# Boiler
+def boiler_bin_ub(model): 
+    return model.x_gas_boiler <= Big_M * model.binary_boiler
+model.c_boiler_bin_ub = pyomo.Constraint(rule=boiler_bin_ub)
+
+# Battery
+def batt_bin_ub(model): 
+    return model.y_el_battery <= Big_M_Joules * model.binary_batt
+model.c_batt_bin_ub = pyomo.Constraint(rule=batt_bin_ub)
+
+# Tank
+def tank_bin_ub(model): 
+    return model.y_h_tank <= Big_M_meters * model.binary_tank
+model.c_tank_bin_ub = pyomo.Constraint(rule=tank_bin_ub)
+
+
+
+# BINARY CONSTRAINTS 
+# Capacity
+# Fuel Cell
+def fc_bin_lb(model): 
+    return model.x_gas_fc >= min_cap_fc * model.binary_fc
+model.c_fc_bin_lb = pyomo.Constraint(rule=fc_bin_lb)
+
+# PV
+def pv_bin_lb(model): 
+    return model.x_el_pv >= min_cap_pv * model.binary_pv
+model.c_pv_bin_lb = pyomo.Constraint(rule=pv_bin_lb)
+
+# Solar Thermal
+def st_bin_lb(model): 
+    return model.x_th_st >= min_cap_st * model.binary_st
+model.c_st_bin_lb = pyomo.Constraint(rule=st_bin_lb)
+
+# Heat Pump
+def hp_bin_lb(model): 
+    return model.x_el_hp >= min_cap_hp * model.binary_hp
+model.c_hp_bin_lb = pyomo.Constraint(rule=hp_bin_lb)
+
+# Boiler
+def boiler_bin_lb(model): 
+    return model.x_gas_boiler >= min_cap_boiler * model.binary_boiler
+model.c_boiler_bin_lb = pyomo.Constraint(rule=boiler_bin_lb)
+
+# Battery
+def batt_bin_lb(model): 
+    return model.y_el_battery >= min_cap_batt * model.binary_batt
+model.c_batt_bin_lb = pyomo.Constraint(rule=batt_bin_lb)
+
+# Tank
+def tank_bin_lb(model): 
+    return model.y_h_tank >= min_height_tank * model.binary_tank
+model.c_tank_bin_lb = pyomo.Constraint(rule=tank_bin_lb)
+
+
+print("BINARY OK")
+
+
+
 
 # OBJECTIVE FUNCTION
 # 2.1a
@@ -535,7 +636,7 @@ def objective_rule(model):
 model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
 
 
-
+ 
 
 # GUROBI
 solver = SolverFactory('gurobi')
@@ -548,36 +649,36 @@ print("          ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ          ")
 print("="*40)
 
 
-# 1. Fuel Cell
+# Fuel Cell
 fc_gas_kw = pyomo.value(model.x_gas_fc) / 1000                          
 print(f"Fuel Cell Capacity:     {fc_gas_kw:.2f} kW")
 
-# 2. PV
+# PV
 pv_cap_kw = pyomo.value(model.x_el_pv) / 1000
 print(f"PV Capacity:            {pv_cap_kw:.2f} kWp")
 
-# 3. Solar Thermal
+# Solar Thermal
 st_area = pyomo.value(model.x_th_st)
 print(f"Solar Thermal Area:     {st_area:.2f} m²")
 
-# 4. Heat Pump
+# Heat Pump
 hp_el_kw = pyomo.value(model.x_el_hp) / 1000                
 print(f"Heat Pump Capacity:     {hp_el_kw:.2f} kW")
 
-# 5. Boiler
+# Boiler
 boiler_kw = pyomo.value(model.x_gas_boiler) / 1000
 print(f"Gas Boiler Capacity:    {boiler_kw:.2f} kW")
 
-# 6. Battery
+# Battery
 bat_cap_kwh = pyomo.value(model.y_el_battery) / 3.6e6  
 print(f"Battery Capacity:       {bat_cap_kwh:.2f} kWh")
 
-# 7. Thermal Tank
+# Thermal Tank
 tank_cap_kwh = pyomo.value(model.heat_store_capacity) / 3.6e6
 print(f"Thermal Tank Capacity:  {tank_cap_kwh:.2f} kWh")
 tank_height = pyomo.value(model.y_h_tank)             
 tank_radius = model.heat_store_F / 2.0
-tank_vol_m3 = 3.14159 * (tank_radius**2) * tank_height
+tank_vol_m3 = 3.14 * (tank_radius**2) * tank_height
 tank_vol_liters = tank_vol_m3 * 1000
 
 print("="*40)
