@@ -2,7 +2,6 @@
 import pyomo.environ as pyomo 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import math
 from math import pi
 import time
@@ -15,8 +14,9 @@ model.T = pyomo.Set(initialize=range(8760))
 eps = np.finfo(float).eps
 
 # SOLAR RADIATION DATA FROM CSV FILE
-data = pd.read_csv("SOLAR_DATA_FIXED.csv", parse_dates=["datetime"]).set_index("datetime")
-ghi_hourly_values = data["GHI"].values[:8760]
+solar_data = pd.read_csv("SOLAR_DATA_FIXED.csv", parse_dates=["datetime"]) 
+solar_data = solar_data.set_index("datetime").resample("h").mean()
+ghi_hourly_values = solar_data["GHI"].values[:8760]
 
 def radiation_initialize(model, t):
     return float(ghi_hourly_values[t])
@@ -26,7 +26,6 @@ model.I_t = pyomo.Param(model.T, initialize=radiation_initialize, domain=pyomo.N
 # ELECTRICITY DEMAND  
 electricity_demand = pd.read_csv("RICHARDSON_FIXED.csv", parse_dates=["datetime"])
 electricity_demand = electricity_demand.set_index("datetime").resample("h").mean()
-assert len(electricity_demand) == 8760
 electricity_load = electricity_demand["load_W"].values[:8760]
 
 def L_electricity_initialize(model, t):
@@ -56,9 +55,9 @@ model.L_sph = pyomo.Param(model.T, initialize=L_sph_initialize, domain=pyomo.Non
 
 # TEMPERATURE DATA
 temperature_demand = pd.read_csv("TEMPERATURES_FIXED.csv", parse_dates=["datetime"])
-temperature_demand = temperature_demand.set_index("datetime").resample("h").mean().iloc[:8760]
-Tamb_series = temperature_demand["Tamb_C"].values
-Tcoll_series = temperature_demand["Tcoll_C"].values
+temperature_demand = temperature_demand.set_index("datetime").resample("h").mean() 
+Tamb_series = temperature_demand["Tamb_C"].values[:8760]
+Tcoll_series = temperature_demand["Tcoll_C"].values[:8760]
 
 def Tamb_initialize(m, t):
     return float(Tamb_series[t]) + 273.15   
@@ -216,6 +215,30 @@ model.co2_price = pyomo.Param(initialize=0.06)
 
 print("PARAMETERS OK")
 
+# lower bounds 
+min_cap_fc = 1000.0       
+min_cap_pv = 1000.0       
+min_cap_st = 1000.0       
+min_cap_hp = 1000.0       
+min_cap_boiler = 1000.0   
+min_cap_batt = 1.0 * 3.6e6  
+min_height_tank = 0.5    
+
+# Big M  
+Big_M = 40000   
+Big_M_Joules = 1e10  
+Big_M_meters = 10.0  
+
+# Binary Decision Variables 1 or 0 
+model.binary_fc = pyomo.Var(domain=pyomo.Binary)
+model.binary_pv = pyomo.Var(domain=pyomo.Binary)
+model.binary_st = pyomo.Var(domain=pyomo.Binary)
+model.binary_hp = pyomo.Var(domain=pyomo.Binary)
+model.binary_boiler = pyomo.Var(domain=pyomo.Binary)
+model.binary_batt = pyomo.Var(domain=pyomo.Binary)
+model.binary_tank = pyomo.Var(domain=pyomo.Binary)
+
+print("BINARY VARIABLES OK")
 
 # 3.1 
 def fc_min_load(model, t):
@@ -489,35 +512,11 @@ model.constraint_space_heating_balance = pyomo.Constraint(model.T, rule=space_he
 def dhw_balance_rule(model, t):
     supply = (model.x_dhw_out_fc[t] + model.x_dhw_out_boiler[t] + model.x_dhw_out_st[t] + model.y_dhw_out_tank[t])
     demand = model.L_dhw[t] + model.y_dhw_in_tank[t] 
-    return supply + model.y_dhw_out_tank[t] - model.y_dhw_in_tank[t] == demand
+    return supply - model.y_dhw_in_tank[t] == demand
 model.constraint_dhw_balance = pyomo.Constraint(model.T, rule=dhw_balance_rule)
 
 
 print("LOAD BALANCE CONSTRAINTS OK")
-
-
-# lower bounds 
-min_cap_fc = 1000.0       
-min_cap_pv = 1000.0       
-min_cap_st = 1000.0       
-min_cap_hp = 1000.0       
-min_cap_boiler = 1000.0   
-min_cap_batt = 1.0 * 3.6e6  
-min_height_tank = 0.5    
-
-# Big M  
-Big_M = 40000   
-Big_M_Joules = 1e10  
-Big_M_meters = 10.0  
-
-# Binary Decision Variables 1 or 0 
-model.binary_fc = pyomo.Var(domain=pyomo.Binary)
-model.binary_pv = pyomo.Var(domain=pyomo.Binary)
-model.binary_st = pyomo.Var(domain=pyomo.Binary)
-model.binary_hp = pyomo.Var(domain=pyomo.Binary)
-model.binary_boiler = pyomo.Var(domain=pyomo.Binary)
-model.binary_batt = pyomo.Var(domain=pyomo.Binary)
-model.binary_tank = pyomo.Var(domain=pyomo.Binary)
 
 
 # BINARY CONSTRAINTS 
