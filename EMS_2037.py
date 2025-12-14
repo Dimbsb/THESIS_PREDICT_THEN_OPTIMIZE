@@ -596,7 +596,7 @@ def tank_bin_lb(model):
 model.c_tank_bin_lb = pyomo.Constraint(rule=tank_bin_lb)
 
 
-print("BINARY OK")
+print("BINARY CONSTRAINTS OK")
 
 
 
@@ -634,13 +634,13 @@ def objective_rule(model):
 
 model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
 
-
+print("OBJECTIVE OK")
  
 
 # GUROBI
 solver = SolverFactory('gurobi')
 results = solver.solve(model, tee=True)
-print("SOLVER OK")
+print("\nSOLVER OK")
 
 
 print("\n" + "="*40)
