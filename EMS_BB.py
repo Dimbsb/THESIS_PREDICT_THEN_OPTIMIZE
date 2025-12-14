@@ -188,12 +188,12 @@ def create_ems_model(T_hours=8760):
 
     print("PARAMETERS OK")
 
-    # lower bounds 
+    # lower bounds W
     min_cap_fc = 1000.0       
     min_cap_pv = 1000.0       
     min_cap_st = 1000.0       
     min_cap_hp = 1000.0       
-    min_cap_boiler = 1000.0   
+    min_cap_boiler = 100.0   
     min_cap_battery = 1.0 * 3.6e6  
     min_height_tank = 0.5    
 
@@ -461,8 +461,10 @@ def create_ems_model(T_hours=8760):
     lb = np.array(model.getAttr("LB", all_vars))
     ub = np.array(model.getAttr("UB", all_vars))
 
+    # Continuous, Binary, Integer(I DON'T HAVE HERE)
     vtypes = model.getAttr("VType", all_vars)
 
+    # If B or I true --- If C (e.g x_gas_in_fc) false 
     integer_var = np.array([vt in ['B', 'I'] for vt in vtypes], dtype=bool)
  
     return model, ub, lb, integer_var, num_vars

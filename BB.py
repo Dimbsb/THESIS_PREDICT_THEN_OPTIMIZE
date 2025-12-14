@@ -361,7 +361,7 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
     return solutions, best_sol_idx, solutions_found
       
       
-      
+# Main
 if __name__ == "__main__":
     print("EMS Branch & Bound")
     
@@ -385,25 +385,25 @@ if __name__ == "__main__":
     end = time.time()
     
     # Results
-    print(f"\nTime: {end-start:.2f}s")
     print(f"Solutions found: {solutions_found}")
     print(f"Nodes explored: {nodes}")
     
     if solutions_found > 0:
-        best_sol = solutions[best_sol_idx]
-        x_vals = best_sol[0]
-        
-        vars_list = model.getVars()
-        var_dict = {v.VarName: i for i, v in enumerate(vars_list)}
-        
-        print("\nEMS OPTIMAL CAPACITIES:")
-        print(f"   Fuel Cell:     {x_vals[var_dict['x_gas_fc']]/1000:.2f} kW")
-        print(f"   PV:            {x_vals[var_dict['x_el_pv']]/1000:.2f} kWp") 
-        print(f"   Solar Thermal: {x_vals[var_dict['x_th_st']]:.2f} m²")
-        print(f"   Heat Pump:     {x_vals[var_dict['x_el_hp']]/1000:.2f} kW")
-        print(f"   Boiler:        {x_vals[var_dict['x_gas_boiler']]/1000:.2f} kW")
-        print(f"   Battery:       {x_vals[var_dict['y_el_battery']]/3.6e6:.2f} kWh")
-        print(f"   Tank height:   {x_vals[var_dict['y_h_tank']]:.2f} m")
-        print(f"\n TOTAL COST: {best_sol[1]:,.2f} CHF/year")
+        best_solution = solutions[best_sol_idx]
+        # For the values position of the list
+        optimal_values_list = best_solution[0]
+        # Connection variable with value
+        solution = {v.VarName: val for v, val in zip(model.getVars(), optimal_values_list)}
+        print(f"Tree depth:: {best_solution[2]}")
+        print(f"\nTime: {end-start:.2f}s")
+        print("\n          ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ          ")
+        print(f"   Fuel Cell:     {solution['x_gas_fc']/1000:.2f} kW")
+        print(f"   PV:            {solution['x_el_pv']/1000:.2f} kWp") 
+        print(f"   Solar Thermal: {solution['x_th_st']:.2f} m²")
+        print(f"   Heat Pump:     {solution['x_el_hp']/1000:.2f} kW")
+        print(f"   Boiler:        {solution['x_gas_boiler']/1000:.2f} kW")
+        print(f"   Battery:       {solution['y_el_battery']/3.6e6:.2f} kWh")
+        print(f"   Tank height:   {solution['y_h_tank']:.2f} m")
+        print(f"\n TOTAL COST: {best_solution[1]:,.2f} CHF/year")
     else:
         print("NO FEASIBLE SOLUTION")
