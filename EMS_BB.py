@@ -14,27 +14,27 @@ def create_ems_model(T_hours=8760):
     eps = np.finfo(float).eps
     
     # SOLAR RADIATION DATA FROM CSV FILE
-    solar_data = pd.read_csv("SOLAR_DATA_FIXED.csv", parse_dates=["datetime"])
+    solar_data = pd.read_csv("SOLAR_DATA_OK.csv", parse_dates=["datetime"])
     solar_data = solar_data.set_index("datetime").resample("h").mean().iloc[:T_hours]
     I_t = solar_data["GHI"].values
     
     # ELECTRICITY DEMAND
-    electricity_demand = pd.read_csv("RICHARDSON_FIXED.csv", parse_dates=["datetime"])
+    electricity_demand = pd.read_csv("RICHARDSON_OK.csv", parse_dates=["datetime"])
     electricity_demand = electricity_demand.set_index("datetime").resample("h").mean().iloc[:T_hours]
     L_electricity = electricity_demand["load_W"].values
     
     # DHW DEMAND 
-    dhw_demand = pd.read_csv("DHW_FIXED.csv", parse_dates=["datetime"])
+    dhw_demand = pd.read_csv("DHW_OK.csv", parse_dates=["datetime"])
     dhw_demand = dhw_demand.set_index("datetime").resample("h").mean().iloc[:T_hours]
     L_dhw = dhw_demand["dhw_W"].values
     
     # SPACE HEAT DEMAND
-    sph_demand = pd.read_csv("SPACE_HEAT_FIXED.csv", parse_dates=["datetime"])
+    sph_demand = pd.read_csv("SPACE_HEAT_OK.csv", parse_dates=["datetime"])
     sph_demand = sph_demand.set_index("datetime").resample("h").mean().iloc[:T_hours]
     L_sph = sph_demand["Q_space_W"].values 
     
     # TEMPERATURE DATA
-    temperature_demand = pd.read_csv("TEMPERATURES_FIXED.csv", parse_dates=["datetime"])
+    temperature_demand = pd.read_csv("TEMPERATURES_OK.csv", parse_dates=["datetime"])
     temperature_demand = temperature_demand.set_index("datetime").resample("h").mean().iloc[:8760]
     Tamb = temperature_demand["Tamb_C"].values + 273.15
     Tcoll = temperature_demand["Tcoll_C"].values + 273.15

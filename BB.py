@@ -404,6 +404,6 @@ if __name__ == "__main__":
         print(f"   Boiler:        {x_vals[var_dict['x_gas_boiler']]/1000:.2f} kW")
         print(f"   Battery:       {x_vals[var_dict['y_el_battery']]/3.6e6:.2f} kWh")
         print(f"   Tank height:   {x_vals[var_dict['y_h_tank']]:.2f} m")
-        print(f"\n TOTAL COST: {best_sol[1]:.2f} CHF/year")
+        print(f"\n TOTAL COST: {best_sol[1]:,.2f} CHF/year")
     else:
         print("NO FEASIBLE SOLUTION")

@@ -14,7 +14,7 @@ model.T = pyomo.Set(initialize=range(8760))
 eps = np.finfo(float).eps
 
 # SOLAR RADIATION DATA FROM CSV FILE
-solar_data = pd.read_csv("SOLAR_DATA_FIXED.csv", parse_dates=["datetime"]) 
+solar_data = pd.read_csv("SOLAR_DATA_OK.csv", parse_dates=["datetime"]) 
 solar_data = solar_data.set_index("datetime").resample("h").mean()
 ghi_hourly_values = solar_data["GHI"].values[:8760]
 
@@ -24,7 +24,7 @@ model.I_t = pyomo.Param(model.T, initialize=radiation_initialize, domain=pyomo.N
 
 
 # ELECTRICITY DEMAND  
-electricity_demand = pd.read_csv("RICHARDSON_FIXED.csv", parse_dates=["datetime"])
+electricity_demand = pd.read_csv("RICHARDSON_OK.csv", parse_dates=["datetime"])
 electricity_demand = electricity_demand.set_index("datetime").resample("h").mean()
 electricity_load = electricity_demand["load_W"].values[:8760]
 
@@ -34,7 +34,7 @@ model.L_electricity = pyomo.Param(model.T, initialize=L_electricity_initialize,d
 
 
 # DHW DEMAND 
-dhw_demand = pd.read_csv("DHW_FIXED.csv", parse_dates=["datetime"])
+dhw_demand = pd.read_csv("DHW_OK.csv", parse_dates=["datetime"])
 dhw_demand = dhw_demand.set_index("datetime").resample("h").mean()
 dhw_load = dhw_demand["dhw_W"].values[:8760]
 
@@ -44,7 +44,7 @@ model.L_dhw = pyomo.Param(model.T, initialize=L_dhw_initialize, domain=pyomo.Non
 
 
 # SPACE HEAT DEMAND
-sph_demand = pd.read_csv("SPACE_HEAT_FIXED.csv", parse_dates=["datetime"])
+sph_demand = pd.read_csv("SPACE_HEAT_OK.csv", parse_dates=["datetime"])
 sph_demand = sph_demand.set_index("datetime").resample("h").mean()
 sph_load = sph_demand["Q_space_W"].values[:8760]
 
@@ -54,7 +54,7 @@ model.L_sph = pyomo.Param(model.T, initialize=L_sph_initialize, domain=pyomo.Non
 
 
 # TEMPERATURE DATA
-temperature_demand = pd.read_csv("TEMPERATURES_FIXED.csv", parse_dates=["datetime"])
+temperature_demand = pd.read_csv("TEMPERATURES_OK.csv", parse_dates=["datetime"])
 temperature_demand = temperature_demand.set_index("datetime").resample("h").mean() 
 Tamb_series = temperature_demand["Tamb_C"].values[:8760]
 Tcoll_series = temperature_demand["Tcoll_C"].values[:8760]
