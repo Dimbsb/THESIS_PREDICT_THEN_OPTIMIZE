@@ -6,7 +6,7 @@ import pandas as pd
 import math
 from math import pi
 
-def create_ems_model(T_hours=8760):
+def create_ems_model(T=8760):
      
     model = gp.Model("EMS")
     model.Params.OutputFlag = 0   
@@ -15,22 +15,22 @@ def create_ems_model(T_hours=8760):
     
     # SOLAR RADIATION DATA FROM CSV FILE
     solar_data = pd.read_csv("SOLAR_DATA_OK.csv", parse_dates=["datetime"])
-    solar_data = solar_data.set_index("datetime").resample("h").mean().iloc[:T_hours]
+    solar_data = solar_data.set_index("datetime").resample("h").mean().iloc[:T]
     I_t = solar_data["GHI"].values
     
     # ELECTRICITY DEMAND
     electricity_demand = pd.read_csv("RICHARDSON_OK.csv", parse_dates=["datetime"])
-    electricity_demand = electricity_demand.set_index("datetime").resample("h").mean().iloc[:T_hours]
+    electricity_demand = electricity_demand.set_index("datetime").resample("h").mean().iloc[:T]
     L_electricity = electricity_demand["load_W"].values
     
     # DHW DEMAND 
     dhw_demand = pd.read_csv("DHW_OK.csv", parse_dates=["datetime"])
-    dhw_demand = dhw_demand.set_index("datetime").resample("h").mean().iloc[:T_hours]
+    dhw_demand = dhw_demand.set_index("datetime").resample("h").mean().iloc[:T]
     L_dhw = dhw_demand["dhw_W"].values
     
     # SPACE HEAT DEMAND
     sph_demand = pd.read_csv("SPACE_HEAT_OK.csv", parse_dates=["datetime"])
-    sph_demand = sph_demand.set_index("datetime").resample("h").mean().iloc[:T_hours]
+    sph_demand = sph_demand.set_index("datetime").resample("h").mean().iloc[:T]
     L_sph = sph_demand["Q_space_W"].values 
     
     # TEMPERATURE DATA
@@ -44,47 +44,47 @@ def create_ems_model(T_hours=8760):
     # Decision Variables
     # Fuel Cell
     x_gas_fc = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="x_gas_fc") 
-    x_gas_in_fc = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_gas_in_fc")
-    x_sph_out_fc = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_fc")    
-    x_dhw_out_fc = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_dhw_out_fc")  
-    x_el_out_fc = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_el_out_fc")
+    x_gas_in_fc = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_gas_in_fc")
+    x_sph_out_fc = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_fc")    
+    x_dhw_out_fc = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_dhw_out_fc")  
+    x_el_out_fc = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_el_out_fc")
     
     # PV
     x_el_pv = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="x_el_pv")
-    x_el_out_pv = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_el_out_pv")
+    x_el_out_pv = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_el_out_pv")
     
     # Solar Thermal
     x_th_st = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="x_th_st")
-    x_sph_out_st = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_st")     
-    x_dhw_out_st = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_dhw_out_st") 
+    x_sph_out_st = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_st")     
+    x_dhw_out_st = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_dhw_out_st") 
 
     # Heat Pump
     x_el_hp = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="x_el_hp")
-    x_sph_out_hp = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_st")
-    x_el_in_hp = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_el_in_hp") 
+    x_sph_out_hp = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_st")
+    x_el_in_hp = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_el_in_hp") 
     
     # Boiler
     x_gas_boiler = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="x_gas_boiler")
-    x_gas_in_boiler = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_gas_in_boiler")  
-    x_sph_out_boiler = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_boiler")  
-    x_dhw_out_boiler = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="x_dhw_out_boiler")
+    x_gas_in_boiler = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_gas_in_boiler")  
+    x_sph_out_boiler = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_boiler")  
+    x_dhw_out_boiler = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_dhw_out_boiler")
     
     # Battery
     y_el_battery = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="y_el_battery")
-    y_el_in_battery = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="y_el_in_battery")   
-    y_el_out_battery = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="y_el_out_battery")     
+    y_el_in_battery = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="y_el_in_battery")   
+    y_el_out_battery = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="y_el_out_battery")     
     
     # Heat Tank 
     y_h_tank = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="y_h_tank") 
-    y_dhw_net_tank = model.addVars(T_hours, lb=-GRB.INFINITY, vtype=GRB.CONTINUOUS, name="y_dhw_net_tank")
-    y_dhw_in_tank = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="y_dhw_in_tank")   
-    y_dhw_out_tank = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="y_dhw_out_tank") 
+    y_dhw_net_tank = model.addVars(T, lb=-GRB.INFINITY, vtype=GRB.CONTINUOUS, name="y_dhw_net_tank")
+    y_dhw_in_tank = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="y_dhw_in_tank")   
+    y_dhw_out_tank = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="y_dhw_out_tank") 
         
     # 3.13
-    T_bdg = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="T_bdg") 
+    T_bdg = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="T_bdg") 
 
     # 3.14
-    dT = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="dT") 
+    dT = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="dT") 
 
     print("DECISION VARIABLES OK")
     
@@ -180,8 +180,8 @@ def create_ems_model(T_hours=8760):
     T_max = 28+273.15
 
     # SUM
-    SOC_el = model.addVars(T_hours, lb=0, vtype=GRB.CONTINUOUS, name="SOC_thermal")
-    SOC_thermal = model.addVars(T_hours, lb=-GRB.INFINITY, vtype=GRB.CONTINUOUS, name="SOC_thermal")
+    SOC_el = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="SOC_thermal")
+    SOC_thermal = model.addVars(T, lb=-GRB.INFINITY, vtype=GRB.CONTINUOUS, name="SOC_thermal")
 
     Dt = 3600
     co2_price = 0.06
@@ -213,7 +213,7 @@ def create_ems_model(T_hours=8760):
 
     print("BINARY VARIABLES OK")
     
-    for t in range(T_hours):
+    for t in range(T):
         # 3.1
         model.addConstr(fc_k * x_gas_fc <= x_gas_in_fc[t], name=f"fc_min_load{t}")
         # 3.1
@@ -255,7 +255,7 @@ def create_ems_model(T_hours=8760):
     print("CONVERSION CONSTRAINTS OK")
       
       
-    for t in range(T_hours):
+    for t in range(T):
         # 3.10
         model.addConstr(y_el_in_battery[t] <= battery_p_plus * y_el_battery, f"battery_charge_ub{t}")
         
@@ -273,21 +273,21 @@ def create_ems_model(T_hours=8760):
     model.addConstr(SOC_el[0] == battery_yo * y_el_battery, name="battery_soc_dynamics_zero")
 
     # 3.10
-    for t in range(1, T_hours):
+    for t in range(1, T):
         model.addConstr(SOC_el[t] == (battery_E * SOC_el[t-1] + (battery_h_plus * y_el_in_battery[t] - 
                 battery_h_minus * y_el_out_battery[t]) * Dt), name=f"battery_soc_dynamics{t}")
 
     # 3.10 
-    model.addConstrs((battery_mo * y_el_battery <= SOC_el[t] for t in range(T_hours)), name="battery_soc_lower")
+    model.addConstrs((battery_mo * y_el_battery <= SOC_el[t] for t in range(T)), name="battery_soc_lower")
 
     # 3.10  
-    model.addConstrs((SOC_el[t] <= y_el_battery for t in range(T_hours)), name="battery_soc_upper")
+    model.addConstrs((SOC_el[t] <= y_el_battery for t in range(T)), name="battery_soc_upper")
 
     # 3.10  
-    model.addConstr(SOC_el[T_hours-1] == battery_yT * y_el_battery, "battery_soc_terminal")
+    model.addConstr(SOC_el[T-1] == battery_yT * y_el_battery, "battery_soc_terminal")
     
     # 3.10 
-    model.addConstr(sum(y_el_out_battery[t] for t in range(T_hours)) <= (T_hours / 24.0) * battery_h_minus * (1 - battery_mo) * y_el_battery, name="battery_cycling_limit")
+    model.addConstr(sum(y_el_out_battery[t] for t in range(T)) <= (T / 24.0) * battery_h_minus * (1 - battery_mo) * y_el_battery, name="battery_cycling_limit")
  
     # 3.11  
     heat_store_capacity = (heat_store_p * heat_store_Cp * (heat_store_Thot - heat_store_Tcold) * pi * ((heat_store_F / 2.0)**2) * y_h_tank)
@@ -302,17 +302,17 @@ def create_ems_model(T_hours=8760):
     model.addConstr(SOC_thermal[0] == heat_store_yo * heat_store_capacity + y_dhw_net_tank[0] * Dt - (heat_store_m1 + heat_store_m2) * Dt, name="tank_soc_dynamics_t0")
 
     # 3.12  
-    for t in range(1, T_hours):
+    for t in range(1, T):
         model.addConstr(SOC_thermal[t] == SOC_thermal[t-1] + y_dhw_net_tank[t] * Dt - (heat_store_m1 + heat_store_m2) * Dt, name=f"tank_soc_dynamics{t}")
 
     # 3.12  
-    model.addConstrs((eps <= SOC_thermal[t] for t in range(T_hours)), name="tank_soc_lower")
+    model.addConstrs((eps <= SOC_thermal[t] for t in range(T)), name="tank_soc_lower")
 
     # 3.12  
-    model.addConstrs((SOC_thermal[t] <= heat_store_capacity for t in range(T_hours)), name="tank_soc_upper")
+    model.addConstrs((SOC_thermal[t] <= heat_store_capacity for t in range(T)), name="tank_soc_upper")
 
     # 3.12  
-    model.addConstr(SOC_thermal[T_hours-1] == heat_store_yT * heat_store_capacity, name="tank_soc_terminal")
+    model.addConstr(SOC_thermal[T-1] == heat_store_yT * heat_store_capacity, name="tank_soc_terminal")
 
 
     print("STORAGE CONSTRAINTS OK")
@@ -326,7 +326,7 @@ def create_ems_model(T_hours=8760):
 
     Q_plus = {}
     # 3.13  
-    for t in range(T_hours):
+    for t in range(T):
         solar_gain = I_t[t] * 0.15
         internal_gain = 3 * 100
         tank_losses = heat_store_m1 + heat_store_m2
@@ -341,37 +341,37 @@ def create_ems_model(T_hours=8760):
     model.addConstr(T_bdg[0] == Tamb[0], "building_temperature_rule_t0")
  
     # 3.13 
-    for t in range(1, T_hours):
+    for t in range(1, T):
         model.addConstr(T_bdg[t] == (exponential * T_bdg[t-1] + one_minus_exponential * Tamb[t] + 
                                      (one_minus_exponential / U) * (Q_plus[t] - Q_minus)), name=f"building_temperature_rule{t}")
 
     # 3.14  
-    model.addConstrs((dT[t] >= T_bdg[t] - T_max for t in range(T_hours)), name="comfort_lower_bound")
+    model.addConstrs((dT[t] >= T_bdg[t] - T_max for t in range(T)), name="comfort_lower_bound")
 
     # 3.14
-    model.addConstrs((dT[t] >= T_min - T_bdg[t] for t in range(T_hours)), name="comfort_upper_bound")
+    model.addConstrs((dT[t] >= T_min - T_bdg[t] for t in range(T)), name="comfort_upper_bound")
 
     # 3.14
-    model.addConstrs((dT[t] >= 0 for t in range(T_hours)), name="comfort_non_negative_rule")
+    model.addConstrs((dT[t] >= 0 for t in range(T)), name="comfort_non_negative_rule")
     
     
     print("BUILDING CONSTRAINTS OK")
      
     
     # NET FLOW HEAT TANK
-    model.addConstrs((y_dhw_net_tank[t] == y_dhw_in_tank[t] - y_dhw_out_tank[t] for t in range(T_hours)), name="dhw_net_flow_rule")
+    model.addConstrs((y_dhw_net_tank[t] == y_dhw_in_tank[t] - y_dhw_out_tank[t] for t in range(T)), name="dhw_net_flow_rule")
 
     # ELECTRICITY BALANCE
     model.addConstrs((x_el_out_fc[t] + x_el_out_pv[t] + y_el_out_battery[t] == 
-        L_electricity[t] + y_el_in_battery[t] for t in range(T_hours)), name="electricity_balance_rule")
+        L_electricity[t] + y_el_in_battery[t] for t in range(T)), name="electricity_balance_rule")
 
     # SPACE HEATING BALANCE
     model.addConstrs((x_sph_out_fc[t] + x_sph_out_boiler[t] + x_sph_out_hp[t] + x_sph_out_st[t] == 
-        L_sph[t] for t in range(T_hours)), name="space_heating_balance_rule")
+        L_sph[t] for t in range(T)), name="space_heating_balance_rule")
 
     # DHW BALANCE - ΔΙΟΡΘΩΜΕΝΟ (Pyomo είχε λάθος!)
     model.addConstrs((x_dhw_out_fc[t] + x_dhw_out_boiler[t] + x_dhw_out_st[t] + y_dhw_out_tank[t] == 
-        L_dhw[t] + y_dhw_in_tank[t] for t in range(T_hours)), name="dhw_balance_rule")
+        L_dhw[t] + y_dhw_in_tank[t] for t in range(T)), name="dhw_balance_rule")
     
     
 
@@ -433,17 +433,17 @@ def create_ems_model(T_hours=8760):
     total_capex = (capex_fc + capex_pv + capex_st + capex_hp + capex_boiler + capex_battery + capex_tank)
 
     cost_gas_fc = fc_Cfuel + co2_price * (fc_pco2 / 1000.0) # 3.2
-    final_cost_fc = gp.quicksum(x_gas_in_fc[t] / 1000.0 * cost_gas_fc for t in range(T_hours)) # 3.2
+    final_cost_fc = sum(x_gas_in_fc[t] / 1000.0 * cost_gas_fc for t in range(T)) # 3.2
 
     cost_sph_hp = hp_Cfuel + co2_price * (hp_pco2 / 1000.0) # 3.7
-    final_cost_hp = gp.quicksum(x_el_in_hp[t] / 1000.0 * cost_sph_hp for t in range(T_hours)) # 3.7
+    final_cost_hp = sum(x_el_in_hp[t] / 1000.0 * cost_sph_hp for t in range(T)) # 3.7
 
     cost_gas_boiler = boiler_Cfuel + co2_price * (boiler_pco2 / 1000.0) # 3.9
-    final_cost_boiler = gp.quicksum(x_gas_in_boiler[t] / 1000.0 * cost_gas_boiler for t in range(T_hours)) # 3.9
+    final_cost_boiler = sum(x_gas_in_boiler[t] / 1000.0 * cost_gas_boiler for t in range(T)) # 3.9
 
     total_final_cost = final_cost_fc + final_cost_hp + final_cost_boiler
 
-    total_penalty = c_T * gp.quicksum(dT[t] for t in range(T_hours))
+    total_penalty = c_T * sum(dT[t] for t in range(T))
 
     # TOTAL OBJECTIVE
     model.setObjective(total_capex + total_final_cost + total_penalty, GRB.MINIMIZE)

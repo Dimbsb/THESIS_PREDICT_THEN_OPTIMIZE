@@ -638,9 +638,13 @@ print("OBJECTIVE OK")
  
 
 # GUROBI
+start = time.time()
 solver = SolverFactory('gurobi')
 results = solver.solve(model, tee=True)
+end = time.time()
 print("\nSOLVER OK")
+
+print(f"\nTime: {end-start:.2f}s")
 
 
 print("\n" + "="*40)
