@@ -8,7 +8,7 @@ from EMS_BB import create_ems_model
  
 
 # Set sense (min/max)
-isMax = True
+isMax = False
 
 WARM_START = True
 DEBUG_MODE = True
