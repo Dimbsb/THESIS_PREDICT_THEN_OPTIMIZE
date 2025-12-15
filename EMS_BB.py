@@ -202,14 +202,14 @@ def create_ems_model(T=8760):
     Big_M_Joules = 1e10  
     Big_M_meters = 10.0  
 
-    # Binary Decision Variables 1 or 0     
-    binary_fc = model.addVar(vtype=GRB.BINARY, name="binary_fc")
-    binary_pv = model.addVar(vtype=GRB.BINARY, name="binary_pv")
-    binary_st = model.addVar(vtype=GRB.BINARY, name="binary_st")
-    binary_hp = model.addVar(vtype=GRB.BINARY, name="binary_hp")
-    binary_boiler = model.addVar(vtype=GRB.BINARY, name="binary_boiler")
-    binary_battery = model.addVar(vtype=GRB.BINARY, name="binary_battery")
-    binary_tank = model.addVar(vtype=GRB.BINARY, name="binary_tank")
+    # Binary Decision Variables 1 or 0  MADE CONTINUOUS   
+    binary_fc = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_fc")
+    binary_pv = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_pv")
+    binary_st = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_st")
+    binary_hp = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_hp")
+    binary_boiler = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_boiler")
+    binary_battery = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_battery")
+    binary_tank = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_tank")
 
     print("BINARY VARIABLES OK")
     
@@ -451,7 +451,6 @@ def create_ems_model(T=8760):
     print("OBJECTIVE OK")
  
 
-    
     model.update()  
 
     # To get variables
@@ -461,10 +460,10 @@ def create_ems_model(T=8760):
     lb = np.array(model.getAttr("LB", all_vars))
     ub = np.array(model.getAttr("UB", all_vars))
 
-    # Continuous, Binary, Integer(I DON'T HAVE HERE)
     vtypes = model.getAttr("VType", all_vars)
 
-    # If B or I true --- If C (e.g x_gas_in_fc) false 
-    integer_var = np.array([vt in ['B', 'I'] for vt in vtypes], dtype=bool)
+    # BINARY MADE CONTINUOUS BEFORE WITH LB AND UB CHOOSE THESE
+    integer_var = [i >= num_vars-7 for i in range(num_vars)]
+
  
-    return model, ub, lb, integer_var, num_vars
+    return model, ub, lb, integer_var, num_vars, vtypes

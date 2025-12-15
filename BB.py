@@ -365,13 +365,17 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
 if __name__ == "__main__":
     print("EMS Branch & Bound")
     
-    model, ub, lb, integer_var, num_vars = create_ems_model(8760) 
+    model, ub, lb, integer_var, num_vars, vtypes = create_ems_model(8760) 
     
     if model is None:
         print("MODEL NOT CREATED")
         exit(1)
     
-    print(f"Model vars: {num_vars}, binaries: {np.sum(integer_var)}")
+    print(f"  BINARY: {sum(1 for vt in vtypes if vt == 'B')}")
+    print(f"  INTEGER: {sum(1 for vt in vtypes if vt == 'I')}")
+    print(f"  CONTINUOUS: {sum(1 for vt in vtypes if vt == 'C')}")
+    print(f"  B&B USES: {np.sum(integer_var)}")
+
     
     # B&B initialization
     isMax = False
@@ -384,16 +388,19 @@ if __name__ == "__main__":
     solutions, best_sol_idx, solutions_found = branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per_depth)
     end = time.time()
     
+ 
     # Results
     print(f"Solutions found: {solutions_found}")
     print(f"Nodes explored: {nodes}")
     
     if solutions_found > 0:
+        
+        best_sol_idx = np.argmin([s[1] for s in solutions])
         best_solution = solutions[best_sol_idx]
-        # For the values position of the list
         optimal_values_list = best_solution[0]
-        # Connection variable with value
         solution = {v.VarName: val for v, val in zip(model.getVars(), optimal_values_list)}
+        
+        
         print(f"Tree depth:: {best_solution[2]}")
         print(f"\nTime: {end-start:.2f}s")
         print("\n          ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ          ")
