@@ -60,6 +60,7 @@ def debug_print(node:Node = None, x_obj = None, sol_status = None):
 def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per_depth, vbasis=[], cbasis=[], depth=0):
     global nodes, lower_bound, upper_bound
 
+    # DFS
     # Create stack using deque() structure
     stack = deque()
 
