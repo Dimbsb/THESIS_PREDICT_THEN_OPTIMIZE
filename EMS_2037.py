@@ -197,6 +197,14 @@ model.heat_store_yo = pyomo.Param(initialize=0.50)
 model.heat_store_yT = pyomo.Param(initialize=0.50)   
 model.heat_store_mo = pyomo.Param(initialize=0.50)   
 
+# Grid
+model.x_grid_import = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  # Αγορά από δίκτυο
+model.x_grid_export = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  # Πώληση στο δίκτυο
+model.grid_price_import = 0.25   # €/kWh - τιμή αγοράς ηλεκτρισμού
+model.grid_price_export = 0.15   # €/kWh - τιμή πώλησης (feed-in tariff)
+model.grid_co2_import = 140      # g CO2/kWh - περιβαλλοντικό αποτύπωμα
+
+
 # 3.13
 model.U = pyomo.Param(initialize=168.0)
 model.C = pyomo.Param(initialize=15e6)
@@ -495,8 +503,8 @@ model.constraint_dhw_net = pyomo.Constraint(model.T, rule=dhw_net_flow_rule)
 
 # ELECTRICITY BALANCE
 def electricity_balance_rule(model, t):
-    supply = (model.x_el_out_fc[t] + model.x_el_out_pv[t] + model.y_el_out_battery[t])
-    demand = model.L_electricity[t] + model.y_el_in_battery[t]
+    supply = (model.x_el_out_fc[t] + model.x_el_out_pv[t] + model.y_el_out_battery[t] + model.x_grid_import[t])
+    demand = model.L_electricity[t] + model.y_el_in_battery[t] + model.x_el_in_hp[t] + model.x_grid_export[t]
     return supply == demand
 model.constraint_electricity_balance = pyomo.Constraint(model.T, rule=electricity_balance_rule)
 
@@ -625,8 +633,12 @@ def objective_rule(model):
     cost_gas_boiler = (model.boiler_Cfuel + model.co2_price * (model.boiler_pco2 / 1000.0)) # 3.9
     final_cost_boiler = sum(model.x_gas_in_boiler[t] / 1000.0 * cost_gas_boiler for t in model.T) # 3.9
     
+    final_cost_grid = sum((model.x_grid_import[t] / 1000.0 * model.grid_price_import - 
+                      model.x_grid_export[t] / 1000.0 * model.grid_price_export) 
+                      for t in model.T)
+    
  
-    total_final_cost = final_cost_fc + final_cost_hp + final_cost_boiler 
+    total_final_cost = final_cost_fc + final_cost_hp + final_cost_boiler + final_cost_grid
  
     penalty = model.c_T * sum(model.dT[t] for t in model.T)
 
