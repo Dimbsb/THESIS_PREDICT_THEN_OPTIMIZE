@@ -615,7 +615,7 @@ def objective_rule(model):
     capex_fc      = (model.fc_Ccap * model.fc_h_el * (model.x_gas_fc / 1000.0)) #+ (model.binary_fc * (model.fc_Cinv/model.fc_Tlife))  
     capex_pv      = (model.pv_Ccap * (model.x_el_pv / 1000.0)) #+ (model.binary_pv * (model.pv_Cinv/model.pv_Tlife))   
     capex_st      = (model.st_Ccap * (model.x_th_st / 1000.0)) #+ (model.binary_st * (model.st_Cinv/model.st_Tlife))   
-    capex_hp      = (model.hp_Ccap * model.hp_h_cop * (model.x_el_hp / 1000.0)) #+ (model.binary_hp * (model.hp_Cinv/model.hp_Tlife))     
+    capex_hp      = (model.hp_Ccap * (model.x_el_hp / 1000.0)) #+ (model.binary_hp * (model.hp_Cinv/model.hp_Tlife))     
     capex_boiler  = (model.boiler_Ccap * model.boiler_h *(model.x_gas_boiler / 1000.0)) #+ (model.binary_boiler * (model.boiler_Cinv/model.boiler_Tlife))   
     capex_battery = (model.battery_Ccap * (model.y_el_battery / 3.6e6)) #+ (model.binary_batt * (model.battery_Cinv/model.battery_Tlife))   
     capex_tank    = (model.heat_store_Ccap * (model.heat_store_capacity / 3.6e6)) #+ (model.binary_tank * (model.heat_store_Cinv/model.heat_store_Tlife))   
