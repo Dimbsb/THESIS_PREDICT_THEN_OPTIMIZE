@@ -108,6 +108,7 @@ model.y_dhw_net_tank = pyomo.Var(model.T, domain=pyomo.Reals)
 model.y_dhw_in_tank = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)   
 model.y_dhw_out_tank = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
 
+
 # 3.13
 model.T_bdg = pyomo.Var(model.T, domain=pyomo.PositiveReals)
 
@@ -172,7 +173,7 @@ model.battery_Cinv = pyomo.Param(initialize=1000)
 model.battery_Tlife = pyomo.Param(initialize=9)   
 model.battery_Ccap = pyomo.Param(initialize=128)   
 model.battery_h = pyomo.Param(initialize=0.92)   
-model.battery_E = pyomo.Param(initialize=0.95*(1.0/24.0))  
+model.battery_E = pyomo.Param(initialize=1.0 - (0.05 / 24.0)) 
 model.battery_mo = pyomo.Param(initialize=0.20)   
 model.battery_p_plus = pyomo.Param(initialize=0.58)   
 model.battery_p_minus = pyomo.Param(initialize=1.00)   
@@ -197,17 +198,14 @@ model.heat_store_yo = pyomo.Param(initialize=0.50)
 model.heat_store_yT = pyomo.Param(initialize=0.50)   
 model.heat_store_mo = pyomo.Param(initialize=0.50)   
 
-# Grid
-model.x_grid_import = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  # Αγορά από δίκτυο
-model.x_grid_export = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)  # Πώληση στο δίκτυο
-model.grid_price_import = 0.25   # €/kWh - τιμή αγοράς ηλεκτρισμού
-model.grid_price_export = 0.15   # €/kWh - τιμή πώλησης (feed-in tariff)
-model.grid_co2_import = 140      # g CO2/kWh - περιβαλλοντικό αποτύπωμα
-
+# Electrical grid
+model.el_grid_in = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
+model.el_grid_cost = pyomo.Param(initialize=0.22)
+model.el_grid_connection_fee = pyomo.Param(initialize=85.0)
 
 # 3.13
 model.U = pyomo.Param(initialize=168.0)
-model.C = pyomo.Param(initialize=15e6)
+model.C = pyomo.Param(initialize=10e6)
 
 # 3.14 
 model.c_T = pyomo.Param(initialize=10.0)
@@ -224,18 +222,18 @@ model.co2_price = pyomo.Param(initialize=0.06)
 print("PARAMETERS OK")
 
 # lower bounds 
-min_cap_fc = 1000.0       
-min_cap_pv = 1000.0       
-min_cap_st = 1000.0       
-min_cap_hp = 1000.0       
-min_cap_boiler = 1000.0   
-min_cap_batt = 1.0 * 3.6e6  
+min_cap_fc = 0.5     
+min_cap_pv = 0.5       
+min_cap_st = 0.5       
+min_cap_hp = 0.5       
+min_cap_boiler = 0.5   
+min_cap_batt = 0.5 * 3.6e6  #0.5 kwh
 min_height_tank = 0.5    
 
 # Big M  
-Big_M = 40000   
-Big_M_Joules = 1e10  
-Big_M_meters = 10.0  
+Big_M = 40000.0   
+Big_M_Joules = 50.0 * 3.6e6  
+Big_M_meters = 5.0  
 
 # Binary Decision Variables 1 or 0 
 model.binary_fc = pyomo.Var(domain=pyomo.Binary)
@@ -389,7 +387,7 @@ def heat_store_m1_rule(model):
             (model.heat_store_F**2) / 2.0)
 model.heat_store_m1 = pyomo.Expression(rule=heat_store_m1_rule)
 
-# M2 3.11 
+# M2 3.11 + -
 def heat_store_m2_rule(model):
     return (pi * model.heat_store_U * (((model.heat_store_Thot - model.heat_store_Tcold)/2.0) - 
             model.heat_store_Tbdg) * model.heat_store_F * model.y_h_tank)
@@ -503,8 +501,8 @@ model.constraint_dhw_net = pyomo.Constraint(model.T, rule=dhw_net_flow_rule)
 
 # ELECTRICITY BALANCE
 def electricity_balance_rule(model, t):
-    supply = (model.x_el_out_fc[t] + model.x_el_out_pv[t] + model.y_el_out_battery[t] + model.x_grid_import[t])
-    demand = model.L_electricity[t] + model.y_el_in_battery[t] + model.x_el_in_hp[t] + model.x_grid_export[t]
+    supply = (model.x_el_out_fc[t] + model.x_el_out_pv[t] + model.y_el_out_battery[t] + model.el_grid_in[t])
+    demand = model.L_electricity[t] + model.y_el_in_battery[t] + model.x_el_in_hp[t]  
     return supply == demand
 model.constraint_electricity_balance = pyomo.Constraint(model.T, rule=electricity_balance_rule)
 
@@ -526,6 +524,7 @@ model.constraint_dhw_balance = pyomo.Constraint(model.T, rule=dhw_balance_rule)
 
 print("LOAD BALANCE CONSTRAINTS OK")
 
+ 
 
 # BINARY CONSTRAINTS 
 # Big_M 
@@ -613,36 +612,34 @@ print("BINARY CONSTRAINTS OK")
 # 2.1a
 def objective_rule(model):
  
-    capex_fc      = model.fc_Ccap * model.fc_h_el * (model.x_gas_fc / 1000.0)
-    capex_pv      = model.pv_Ccap * (model.x_el_pv / 1000.0)
-    capex_st      = model.st_Ccap * (model.x_th_st / 1000.0)
-    capex_hp      = model.hp_Ccap * (model.x_el_hp / 1000.0)
-    capex_boiler  = model.boiler_Ccap * model.boiler_h *(model.x_gas_boiler / 1000.0)
-    capex_battery = model.battery_Ccap * (model.y_el_battery / 3.6e6)  
-    capex_tank    = model.heat_store_Ccap * (model.heat_store_capacity / 3.6e6)
-    
+    capex_fc      = (model.fc_Ccap * model.fc_h_el * (model.x_gas_fc / 1000.0)) #+ (model.binary_fc * (model.fc_Cinv/model.fc_Tlife))  
+    capex_pv      = (model.pv_Ccap * (model.x_el_pv / 1000.0)) #+ (model.binary_pv * (model.pv_Cinv/model.pv_Tlife))   
+    capex_st      = (model.st_Ccap * (model.x_th_st / 1000.0)) #+ (model.binary_st * (model.st_Cinv/model.st_Tlife))   
+    capex_hp      = (model.hp_Ccap * model.hp_h_cop * (model.x_el_hp / 1000.0)) #+ (model.binary_hp * (model.hp_Cinv/model.hp_Tlife))     
+    capex_boiler  = (model.boiler_Ccap * model.boiler_h *(model.x_gas_boiler / 1000.0)) #+ (model.binary_boiler * (model.boiler_Cinv/model.boiler_Tlife))   
+    capex_battery = (model.battery_Ccap * (model.y_el_battery / 3.6e6)) #+ (model.binary_batt * (model.battery_Cinv/model.battery_Tlife))   
+    capex_tank    = (model.heat_store_Ccap * (model.heat_store_capacity / 3.6e6)) #+ (model.binary_tank * (model.heat_store_Cinv/model.heat_store_Tlife))   
+
     total_capex = (capex_fc + capex_pv + capex_st + capex_hp + capex_boiler + capex_battery + capex_tank)
 
  
     cost_gas_fc = (model.fc_Cfuel + model.co2_price * (model.fc_pco2 / 1000.0)) # 3.2
-    final_cost_fc = sum(model.x_gas_in_fc[t] / 1000.0 * cost_gas_fc for t in model.T) # 3.2
+    final_cost_fc = sum(model.x_gas_in_fc[t] / 1000.0 * (model.Dt / 3600.0) * cost_gas_fc for t in model.T) # 3.2
     
-    cost_sph_hp = (model.hp_Cfuel + model.co2_price * (model.hp_pco2 / 1000.0)) # 3.7
-    final_cost_hp = sum(model.x_el_in_hp[t] / 1000.0 * cost_sph_hp for t in model.T) # 3.7
+    #cost_sph_hp = (model.hp_Cfuel + model.co2_price * (model.hp_pco2 / 1000.0)) # 3.7
+    cost_sph_hp = (model.co2_price * (model.hp_pco2 / 1000.0)) # 3.7
+    final_cost_hp = sum(model.x_el_in_hp[t] / 1000.0 * (model.Dt / 3600.0) * cost_sph_hp for t in model.T) # 3.7
     
     cost_gas_boiler = (model.boiler_Cfuel + model.co2_price * (model.boiler_pco2 / 1000.0)) # 3.9
-    final_cost_boiler = sum(model.x_gas_in_boiler[t] / 1000.0 * cost_gas_boiler for t in model.T) # 3.9
+    final_cost_boiler = sum(model.x_gas_in_boiler[t] / 1000.0 * (model.Dt / 3600.0) * cost_gas_boiler for t in model.T) # 3.9
+
+    final_cost_grid = sum((model.el_grid_in[t] * model.Dt / 3.6e6) * model.el_grid_cost for t in model.T)
     
-    final_cost_grid = sum((model.x_grid_import[t] / 1000.0 * model.grid_price_import - 
-                      model.x_grid_export[t] / 1000.0 * model.grid_price_export) 
-                      for t in model.T)
-    
- 
-    total_final_cost = final_cost_fc + final_cost_hp + final_cost_boiler + final_cost_grid
- 
+    total_final_cost = (final_cost_fc + final_cost_hp + final_cost_boiler + final_cost_grid)
+     
     penalty = model.c_T * sum(model.dT[t] for t in model.T)
 
-    return total_capex + total_final_cost + penalty
+    return total_capex + total_final_cost + penalty + model.el_grid_connection_fee 
 
 model.objective = pyomo.Objective(rule=objective_rule, sense=pyomo.minimize)
 
@@ -673,12 +670,16 @@ pv_cap_kw = pyomo.value(model.x_el_pv) / 1000
 print(f"PV Capacity:            {pv_cap_kw:.2f} kWp")
 
 # Solar Thermal
-st_area = pyomo.value(model.x_th_st)
+st_area = pyomo.value(model.x_th_st) / model.st_p
 print(f"Solar Thermal Area:     {st_area:.2f} m²")
 
 # Heat Pump
 hp_el_kw = pyomo.value(model.x_el_hp) / 1000                
 print(f"Heat Pump Capacity:     {hp_el_kw:.2f} kW")
+
+# Grid
+grid_kw = max(pyomo.value(model.el_grid_in[t]) / 1000 for t in model.T)
+print(f"Grid Connection Size:   {grid_kw:.2f} kW")
 
 # Boiler
 boiler_kw = pyomo.value(model.x_gas_boiler) / 1000
@@ -698,8 +699,10 @@ tank_vol_liters = tank_vol_m3 * 1000
 
 print("="*40)
 print(f"Thermal Tank Height:    {tank_height:.2f} m")
-print(f"Thermal Tank Volume:    {tank_vol_liters:.0f} Liters ({tank_vol_m3:.2f} m³)")
+print(f"Thermal Tank Volume:    {tank_vol_liters:.0f} Liters")
 print("="*40)
 total_cost = pyomo.value(model.objective)
 print(f"TOTAL ANNUALIZED COST:          {total_cost:,.2f} CHF/year")
 print("="*40)
+
+ 
