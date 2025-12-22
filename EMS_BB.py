@@ -145,7 +145,7 @@ def create_ems_model(T=8760):
     battery_Tlife = 9  
     battery_Ccap = 128  
     battery_h = 0.92  
-    battery_E = 0.95*(1.0/24.0) 
+    battery_E = 1.0 - (0.05 / 24.0)
     battery_mo = 0.20  
     battery_p_plus = 0.58  
     battery_p_minus = 1.00  
@@ -170,9 +170,14 @@ def create_ems_model(T=8760):
     heat_store_yT = 0.50  
     heat_store_mo = 0.50  
 
+    # Electrical grid
+    el_grid_in = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="el_grid_in")
+    el_grid_cost = 0.22
+    el_grid_connection_fee = 85.0
+
     # 3.13
     U = 168.0
-    C = 15e6
+    C = 10e6
 
     # 3.14 
     c_T = 10.0
@@ -189,18 +194,18 @@ def create_ems_model(T=8760):
     print("PARAMETERS OK")
 
     # lower bounds W
-    min_cap_fc = 1000.0       
-    min_cap_pv = 1000.0       
-    min_cap_st = 1000.0       
-    min_cap_hp = 1000.0       
-    min_cap_boiler = 100.0   
-    min_cap_battery = 1.0 * 3.6e6  
+    min_cap_fc = 0.5       
+    min_cap_pv = 0.5       
+    min_cap_st = 0.5       
+    min_cap_hp = 0.5       
+    min_cap_boiler = 0.5   
+    min_cap_battery = 0.5 * 3.6e6  
     min_height_tank = 0.5    
 
     # Big M  
-    Big_M = 40000   
-    Big_M_Joules = 1e10  
-    Big_M_meters = 10.0  
+    Big_M = 40000.0   
+    Big_M_Joules = 50.0 * 3.6e6  
+    Big_M_meters = 5.0  
 
     # Binary Decision Variables 1 or 0  MADE CONTINUOUS   
     binary_fc = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_fc")
@@ -362,14 +367,14 @@ def create_ems_model(T=8760):
     model.addConstrs((y_dhw_net_tank[t] == y_dhw_in_tank[t] - y_dhw_out_tank[t] for t in range(T)), name="dhw_net_flow_rule")
 
     # ELECTRICITY BALANCE
-    model.addConstrs((x_el_out_fc[t] + x_el_out_pv[t] + y_el_out_battery[t] == 
-        L_electricity[t] + y_el_in_battery[t] for t in range(T)), name="electricity_balance_rule")
+    model.addConstrs((x_el_out_fc[t] + x_el_out_pv[t] + y_el_out_battery[t] + el_grid_in[t] == 
+        L_electricity[t] + y_el_in_battery[t] + x_el_in_hp[t] for t in range(T)), name="electricity_balance_rule")
 
     # SPACE HEATING BALANCE
     model.addConstrs((x_sph_out_fc[t] + x_sph_out_boiler[t] + x_sph_out_hp[t] + x_sph_out_st[t] == 
         L_sph[t] for t in range(T)), name="space_heating_balance_rule")
 
-    # DHW BALANCE - ΔΙΟΡΘΩΜΕΝΟ (Pyomo είχε λάθος!)
+    # DHW BALANCE  
     model.addConstrs((x_dhw_out_fc[t] + x_dhw_out_boiler[t] + x_dhw_out_st[t] + y_dhw_out_tank[t] == 
         L_dhw[t] + y_dhw_in_tank[t] for t in range(T)), name="dhw_balance_rule")
     
@@ -432,21 +437,24 @@ def create_ems_model(T=8760):
 
     total_capex = (capex_fc + capex_pv + capex_st + capex_hp + capex_boiler + capex_battery + capex_tank)
 
-    cost_gas_fc = fc_Cfuel + co2_price * (fc_pco2 / 1000.0) # 3.2
-    final_cost_fc = sum(x_gas_in_fc[t] / 1000.0 * cost_gas_fc for t in range(T)) # 3.2
+    cost_gas_fc = (fc_Cfuel + co2_price * (fc_pco2 / 1000.0)) # 3.2
+    final_cost_fc = sum(x_gas_in_fc[t] / 1000.0 * (Dt / 3600.0) * cost_gas_fc for t in range(T)) # 3.2
+    
+    #cost_sph_hp = (hp_Cfuel + co2_price * (hp_pco2 / 1000.0)) # 3.7
+    cost_sph_hp = (co2_price * (hp_pco2 / 1000.0)) # 3.7
+    final_cost_hp = sum(x_el_in_hp[t] / 1000.0 * (Dt / 3600.0) * cost_sph_hp for t in range(T)) # 3.7
+    cost_gas_boiler = (boiler_Cfuel + co2_price * (boiler_pco2 / 1000.0)) # 3.9
+    final_cost_boiler = sum(x_gas_in_boiler[t] / 1000.0 * (Dt / 3600.0) * cost_gas_boiler for t in range(T)) # 3.9
 
-    cost_sph_hp = hp_Cfuel + co2_price * (hp_pco2 / 1000.0) # 3.7
-    final_cost_hp = sum(x_el_in_hp[t] / 1000.0 * cost_sph_hp for t in range(T)) # 3.7
+    final_cost_grid = sum((el_grid_in[t] * Dt / 3.6e6) * el_grid_cost for t in range(T))
 
-    cost_gas_boiler = boiler_Cfuel + co2_price * (boiler_pco2 / 1000.0) # 3.9
-    final_cost_boiler = sum(x_gas_in_boiler[t] / 1000.0 * cost_gas_boiler for t in range(T)) # 3.9
+    total_final_cost = (final_cost_fc + final_cost_hp + final_cost_boiler + final_cost_grid)
 
-    total_final_cost = final_cost_fc + final_cost_hp + final_cost_boiler
 
     total_penalty = c_T * sum(dT[t] for t in range(T))
 
     # TOTAL OBJECTIVE
-    model.setObjective(total_capex + total_final_cost + total_penalty, GRB.MINIMIZE)
+    model.setObjective(total_capex + total_final_cost + total_penalty + el_grid_connection_fee, GRB.MINIMIZE)
 
     print("OBJECTIVE OK")
  
