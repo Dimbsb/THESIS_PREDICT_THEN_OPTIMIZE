@@ -407,7 +407,7 @@ if __name__ == "__main__":
         print("\n          ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ          ")
         print(f"   Fuel Cell:     {solution['x_gas_fc']/1000:.2f} kW")
         print(f"   PV:            {solution['x_el_pv']/1000:.2f} kWp") 
-        print(f"   Solar Thermal: {solution['x_th_st']:.2f} m²")
+        print(f"   Solar Thermal: {solution['x_th_st']:.2f} m²") #???
         print(f"   Heat Pump:     {solution['x_el_hp']/1000:.2f} kW")
         print(f"   Boiler:        {solution['x_gas_boiler']/1000:.2f} kW")
         print(f"   Battery:       {solution['y_el_battery']/3.6e6:.2f} kWh")

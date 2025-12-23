@@ -200,8 +200,9 @@ model.heat_store_mo = pyomo.Param(initialize=0.50)
 
 # Electrical grid
 model.el_grid_in = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
-model.el_grid_cost = pyomo.Param(initialize=0.22)
+model.el_grid_cost = pyomo.Param(initialize=0.15)
 model.el_grid_connection_fee = pyomo.Param(initialize=85.0)
+model.grid_pco2 = pyomo.Param(initialize=92)
 
 # 3.13
 model.U = pyomo.Param(initialize=168.0)
@@ -222,13 +223,13 @@ model.co2_price = pyomo.Param(initialize=0.06)
 print("PARAMETERS OK")
 
 # lower bounds 
-min_cap_fc = 0.5     
-min_cap_pv = 0.5       
-min_cap_st = 0.5       
-min_cap_hp = 0.5       
-min_cap_boiler = 0.5   
-min_cap_batt = 0.5 * 3.6e6  #0.5 kwh
-min_height_tank = 0.5    
+min_cap_fc = 0.1     
+min_cap_pv = 0.1       
+min_cap_st = 0.1       
+min_cap_hp = 0.1       
+min_cap_boiler = 0.1   
+min_cap_batt = 0.1 * 3.6e6  #0.1 kwh
+min_height_tank = 0.1    
 
 # Big M  
 Big_M = 40000.0   
@@ -449,12 +450,9 @@ def Q_plus(model, t):
     solar_gain = model.I_t[t] * 0.15
     internal_gain = 3 * 100
     
-    # Heat Store Losses
-    tank_losses = model.heat_store_m1 + model.heat_store_m2
-    
     heating = (model.x_sph_out_hp[t] + model.x_sph_out_boiler[t] + model.x_sph_out_fc[t] + model.x_sph_out_st[t])
     
-    return solar_gain + internal_gain - tank_losses + heating
+    return solar_gain + internal_gain + heating
 model.Q_plus = pyomo.Expression(model.T, rule=Q_plus)
 
 
@@ -518,7 +516,7 @@ model.constraint_space_heating_balance = pyomo.Constraint(model.T, rule=space_he
 def dhw_balance_rule(model, t):
     supply = (model.x_dhw_out_fc[t] + model.x_dhw_out_boiler[t] + model.x_dhw_out_st[t] + model.y_dhw_out_tank[t])
     demand = model.L_dhw[t] + model.y_dhw_in_tank[t] 
-    return supply - model.y_dhw_in_tank[t] == demand
+    return supply == demand
 model.constraint_dhw_balance = pyomo.Constraint(model.T, rule=dhw_balance_rule)
 
 
@@ -626,14 +624,14 @@ def objective_rule(model):
     cost_gas_fc = (model.fc_Cfuel + model.co2_price * (model.fc_pco2 / 1000.0)) # 3.2
     final_cost_fc = sum(model.x_gas_in_fc[t] / 1000.0 * (model.Dt / 3600.0) * cost_gas_fc for t in model.T) # 3.2
     
-    #cost_sph_hp = (model.hp_Cfuel + model.co2_price * (model.hp_pco2 / 1000.0)) # 3.7
-    cost_sph_hp = (model.co2_price * (model.hp_pco2 / 1000.0)) # 3.7
+    cost_sph_hp = (model.hp_Cfuel + model.co2_price * (model.hp_pco2 / 1000.0)) # 3.7
     final_cost_hp = sum(model.x_el_in_hp[t] / 1000.0 * (model.Dt / 3600.0) * cost_sph_hp for t in model.T) # 3.7
     
     cost_gas_boiler = (model.boiler_Cfuel + model.co2_price * (model.boiler_pco2 / 1000.0)) # 3.9
     final_cost_boiler = sum(model.x_gas_in_boiler[t] / 1000.0 * (model.Dt / 3600.0) * cost_gas_boiler for t in model.T) # 3.9
 
-    final_cost_grid = sum((model.el_grid_in[t] * model.Dt / 3.6e6) * model.el_grid_cost for t in model.T)
+    cost_grid_total = model.el_grid_cost + model.co2_price * (model.grid_pco2 / 1000.0)
+    final_cost_grid = sum((model.el_grid_in[t] * model.Dt / 3.6e6) * cost_grid_total for t in model.T)
     
     total_final_cost = (final_cost_fc + final_cost_hp + final_cost_boiler + final_cost_grid)
      

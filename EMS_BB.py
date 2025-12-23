@@ -60,7 +60,7 @@ def create_ems_model(T=8760):
 
     # Heat Pump
     x_el_hp = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="x_el_hp")
-    x_sph_out_hp = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_st")
+    x_sph_out_hp = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_sph_out_hp")
     x_el_in_hp = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="x_el_in_hp") 
     
     # Boiler
@@ -172,8 +172,9 @@ def create_ems_model(T=8760):
 
     # Electrical grid
     el_grid_in = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="el_grid_in")
-    el_grid_cost = 0.22
+    el_grid_cost = 0.15
     el_grid_connection_fee = 85.0
+    grid_pco2 = 92.0
 
     # 3.13
     U = 168.0
@@ -194,13 +195,13 @@ def create_ems_model(T=8760):
     print("PARAMETERS OK")
 
     # lower bounds W
-    min_cap_fc = 0.5       
-    min_cap_pv = 0.5       
-    min_cap_st = 0.5       
-    min_cap_hp = 0.5       
-    min_cap_boiler = 0.5   
-    min_cap_battery = 0.5 * 3.6e6  
-    min_height_tank = 0.5    
+    min_cap_fc = 0.1       
+    min_cap_pv = 0.1       
+    min_cap_st = 0.1       
+    min_cap_hp = 0.1       
+    min_cap_boiler = 0.1   
+    min_cap_battery = 0.1 * 3.6e6  
+    min_height_tank = 0.1    
 
     # Big M  
     Big_M = 40000.0   
@@ -334,10 +335,9 @@ def create_ems_model(T=8760):
     for t in range(T):
         solar_gain = I_t[t] * 0.15
         internal_gain = 3 * 100
-        tank_losses = heat_store_m1 + heat_store_m2
         heating = (x_sph_out_hp[t] + x_sph_out_boiler[t] + x_sph_out_fc[t] + x_sph_out_st[t])
         
-        Q_plus[t] = solar_gain + internal_gain - tank_losses + heating
+        Q_plus[t] = solar_gain + internal_gain + heating
         
         
     Q_minus = 0
@@ -440,13 +440,14 @@ def create_ems_model(T=8760):
     cost_gas_fc = (fc_Cfuel + co2_price * (fc_pco2 / 1000.0)) # 3.2
     final_cost_fc = sum(x_gas_in_fc[t] / 1000.0 * (Dt / 3600.0) * cost_gas_fc for t in range(T)) # 3.2
     
-    #cost_sph_hp = (hp_Cfuel + co2_price * (hp_pco2 / 1000.0)) # 3.7
-    cost_sph_hp = (co2_price * (hp_pco2 / 1000.0)) # 3.7
+    cost_sph_hp = (hp_Cfuel + co2_price * (hp_pco2 / 1000.0)) # 3.7
     final_cost_hp = sum(x_el_in_hp[t] / 1000.0 * (Dt / 3600.0) * cost_sph_hp for t in range(T)) # 3.7
+    
     cost_gas_boiler = (boiler_Cfuel + co2_price * (boiler_pco2 / 1000.0)) # 3.9
     final_cost_boiler = sum(x_gas_in_boiler[t] / 1000.0 * (Dt / 3600.0) * cost_gas_boiler for t in range(T)) # 3.9
 
-    final_cost_grid = sum((el_grid_in[t] * Dt / 3.6e6) * el_grid_cost for t in range(T))
+    cost_grid_total = el_grid_cost + co2_price * (grid_pco2 / 1000.0)
+    final_cost_grid = sum((el_grid_in[t] * Dt / 3.6e6) * cost_grid_total for t in range(T))
 
     total_final_cost = (final_cost_fc + final_cost_hp + final_cost_boiler + final_cost_grid)
 
