@@ -56,11 +56,31 @@ def debug_print(node:Node = None, x_obj = None, sol_status = None):
 
         print("\n\n--------------------------------------------------\n\n")
 
+
+def check_depth_completion(depth, nodes_per_depth, best_bound_per_depth, lb, ub, isMax, DEBUG_MODE):
+    stop = False
+    
+    # If all nodes in the current depth have been visited
+    if nodes_per_depth[depth] == 0:
+        if isMax:
+            # Update Global Upper Bound
+            ub = best_bound_per_depth[depth]
+            if ub <= lb + 1e-6: # Check termination
+                if DEBUG_MODE: print("Global UB hit LB (Level Completed). Stopping.")
+                stop = True
+        else:
+            # Update Global Lower Bound
+            lb = best_bound_per_depth[depth]
+            if lb >= ub - 1e-6: # Check termination
+                if DEBUG_MODE: print("Global LB hit UB (Level Completed). Stopping.")
+                stop = True
+                
+    return stop, lb, ub
+
 # Definition of the branch & bound algorithm.
 def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per_depth, vbasis=[], cbasis=[], depth=0):
     global nodes, lower_bound, upper_bound
 
-    # DFS
     # Create stack using deque() structure
     stack = deque()
 
@@ -177,7 +197,7 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
         stack.pop()
 
         # Increase the nodes visited for current depth
-        nodes_per_depth[current_node.depth] += 1
+        nodes_per_depth[current_node.depth] -= 1
 
 
         # Warm start solver. Use the vbasis and cbasis that parent node passed to the current one.
@@ -210,7 +230,17 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
             else:
                 infeasible = True
                 x_obj = np.inf
-
+            
+            for i in range(current_node.depth + 1, len(nodes_per_depth)):
+                nodes_per_depth[i] -= 2 ** (i - current_node.depth)
+            
+            # if we reached the final node of a depth, then update the bounds
+            stop, lower_bound, upper_bound = check_depth_completion(
+                current_node.depth, nodes_per_depth, best_bound_per_depth, 
+                lower_bound, upper_bound, isMax, DEBUG_MODE
+            )
+            if stop: 
+                return solutions, best_sol_idx, solutions_found
 
         else:
             # Get the solution (variable assignments)
@@ -219,7 +249,11 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
             # Get the objective value
             x_obj = model.ObjVal
 
-
+            # update best bound per depth if a better solution was found
+            if isMax == True and x_obj > best_bound_per_depth[current_node.depth]:
+                best_bound_per_depth[current_node.depth] = x_obj
+            elif isMax == False and x_obj < best_bound_per_depth[current_node.depth]:
+                best_bound_per_depth[current_node.depth] = x_obj
 
         # If infeasible don't create children (continue searching the next node)
         if infeasible:
@@ -266,6 +300,18 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
                         best_sol_obj = x_obj
                         best_sol_idx = solutions_found - 1
                     
+                    # remove the children nodes from each next depth
+                    for i in range(current_node.depth + 1, len(nodes_per_depth)):
+                        nodes_per_depth[i] -= 2 ** (i - current_node.depth)
+
+                    # if we reached the final node of a depth, then update the bounds
+                    stop, lower_bound, upper_bound = check_depth_completion(
+                        current_node.depth, nodes_per_depth, best_bound_per_depth, 
+                        lower_bound, upper_bound, isMax, DEBUG_MODE
+                    )
+                    if stop: 
+                        return solutions, best_sol_idx, solutions_found
+
                     
                     if DEBUG_MODE:
                         debug_print(node=current_node, x_obj=x_obj, sol_status="Integer")
@@ -294,10 +340,35 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
                         best_sol_obj = x_obj
                         best_sol_idx = solutions_found - 1
 
+                    # remove the children nodes from each next depth
+                    for i in range(current_node.depth + 1, len(nodes_per_depth)):
+                        nodes_per_depth[i] -= 2 ** (i - current_node.depth)
+
+                    # if we reached the final node of a depth, then update the bounds
+                    stop, lower_bound, upper_bound = check_depth_completion(
+                        current_node.depth, nodes_per_depth, best_bound_per_depth, 
+                        lower_bound, upper_bound, isMax, DEBUG_MODE
+                    )
+                    if stop: 
+                        return solutions, best_sol_idx, solutions_found
+
                     
                     if DEBUG_MODE:
                         debug_print(node=current_node, x_obj=x_obj, sol_status="Integer")
                     continue
+            
+            # do not branch further if is an equal solution
+            # remove the children nodes from each next depth
+            for i in range(current_node.depth + 1, len(nodes_per_depth)):
+                nodes_per_depth[i] -= 2 ** (i - current_node.depth)
+
+            # if we reached the final node of a depth, then update the bounds
+            stop, lower_bound, upper_bound = check_depth_completion(
+                current_node.depth, nodes_per_depth, best_bound_per_depth, 
+                lower_bound, upper_bound, isMax, DEBUG_MODE
+            )
+            if stop: 
+                return solutions, best_sol_idx, solutions_found
 
             # Do not branch further if is an equal solution
             if DEBUG_MODE:
@@ -320,12 +391,38 @@ def branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per
         if isMax:
   
             if x_obj < lower_bound:
+                
+                # remove the children nodes from each next depth
+                for i in range(current_node.depth + 1, len(nodes_per_depth)):
+                    nodes_per_depth[i] -= 2 ** (i - current_node.depth)
+
+                # if we reached the final node of a depth, then update the bounds
+                stop, lower_bound, upper_bound = check_depth_completion(
+                    current_node.depth, nodes_per_depth, best_bound_per_depth, 
+                    lower_bound, upper_bound, isMax, DEBUG_MODE
+                )
+                if stop: 
+                    return solutions, best_sol_idx, solutions_found
+
                 if DEBUG_MODE:
                     debug_print(node=current_node, x_obj=x_obj, sol_status="Fractional -- Cut by bound")
                 continue
         else:
             
             if x_obj > upper_bound:
+
+                # remove the children nodes from each next depth
+                for i in range(current_node.depth + 1, len(nodes_per_depth)):
+                    nodes_per_depth[i] -= 2 ** (i - current_node.depth)
+
+                # if we reached the final node of a depth, then update the bounds
+                stop, lower_bound, upper_bound = check_depth_completion(
+                    current_node.depth, nodes_per_depth, best_bound_per_depth, 
+                    lower_bound, upper_bound, isMax, DEBUG_MODE
+                )
+                if stop: 
+                    return solutions, best_sol_idx, solutions_found
+
                 if DEBUG_MODE:
                     debug_print(node=current_node, x_obj=x_obj, sol_status="Fractional -- Cut by bound")
                 continue
@@ -381,7 +478,8 @@ if __name__ == "__main__":
     # B&B initialization
     isMax = False
     best_bound_per_depth = np.array([np.inf for i in range(num_vars)])
-    nodes_per_depth = np.array([0 for i in range(num_vars)])
+    #nodes_per_depth = np.array([0 for i in range(num_vars)])
+    nodes_per_depth = [0 for i in range(num_vars)]
     
     # Start solving
     print("RUN Branch & Bound ")
