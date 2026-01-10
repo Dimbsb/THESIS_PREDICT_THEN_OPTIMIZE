@@ -216,6 +216,8 @@ def create_ems_model(T=8760):
     binary_boiler = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_boiler")
     binary_battery = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_battery")
     binary_tank = model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS, name="binary_tank")
+    
+    binary_vars = [binary_fc, binary_pv, binary_st, binary_hp, binary_boiler, binary_battery, binary_tank]
 
     print("BINARY VARIABLES OK")
     
@@ -422,7 +424,20 @@ def create_ems_model(T=8760):
      
     
     print("BINARY CONSTRAINTS OK")
+        
+    print("CUSTOM CUTS")    
+######################################################################################################
+ 
+
+######################################################################################################
+
+    print("CUSTOM CUTS OK")
+######################################################################################################
+######################################################################################################
+######################################################################################################
+            
     
+     
     
     
     # OBJECTIVE FUNCTION
@@ -475,4 +490,4 @@ def create_ems_model(T=8760):
     integer_var = [i >= num_vars-7 for i in range(num_vars)]
 
  
-    return model, ub, lb, integer_var, num_vars, vtypes
+    return model, ub, lb, integer_var, num_vars, vtypes, binary_vars
