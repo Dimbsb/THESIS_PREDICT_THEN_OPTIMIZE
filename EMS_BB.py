@@ -413,24 +413,39 @@ def create_ems_model(T=8760):
     # BINARY CONSTRAINTS 
     # Capacity
     # Fuel Cell 
-    
     model.addConstr(x_gas_fc >= min_cap_fc * binary_fc, name="fc_bin_lb")
+    
+    # PV
     model.addConstr(x_el_pv >= min_cap_pv * binary_pv, name="pv_bin_lb")
+    
+    # Solar Thermal
     model.addConstr(x_th_st >= min_cap_st * binary_st, name="st_bin_lb")
+    
+    # Heat Pump
     model.addConstr(x_el_hp >= min_cap_hp * binary_hp, name="hp_bin_lb")
+    
+    # Boiler
     model.addConstr(x_gas_boiler >= min_cap_boiler * binary_boiler, name="boiler_bin_lb")
+    
+    # Battery
     model.addConstr(y_el_battery >= min_cap_battery * binary_battery, name="battery_bin_lb")
+    
+    # Tank
     model.addConstr(y_h_tank >= min_height_tank * binary_tank, name="tank_bin_lb") 
      
     
     print("BINARY CONSTRAINTS OK")
+
         
+######################################################################################################
+######################################################################################################
+######################################################################################################
     print("CUSTOM CUTS")    
 ######################################################################################################
  
+#CUTS
 
 ######################################################################################################
-
     print("CUSTOM CUTS OK")
 ######################################################################################################
 ######################################################################################################
