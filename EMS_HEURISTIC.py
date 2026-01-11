@@ -15,46 +15,50 @@ from EMS_BB import create_ems_model
 # CHECK FEASIBILITY 
 def check_feasibility(solution, model, binary_vars):
 
-    original_bounds = [(v.LB, v.UB) for v in binary_vars]
+    bounds = [(i.LB, i.UB) for i in binary_vars] # (0, 1), (0, 1)... for all binary vars
     
     try:
-        for i, value in enumerate(solution):
+        for i, value in enumerate(solution): # e.g 0 or 1 according to solution
             binary_vars[i].LB = float(value)
             binary_vars[i].UB = float(value)
         
-        model.update()
-        model.optimize()
+        model.update() # Update the model with the new bounds
+        model.optimize() # Solve the model with the fixed binary variables  
         
-        return model.status == GRB.OPTIMAL
-        
+        return model.status == GRB.OPTIMAL # Return True if found feasible solution
+            
     finally:
-        for i, (lb, ub) in enumerate(original_bounds):
+        for i in range(len(binary_vars)): # Restore original bounds
+            lb = bounds[i][0]
+            ub = bounds[i][1]
             binary_vars[i].LB = lb
             binary_vars[i].UB = ub
-        model.update()
+        model.update() # Again (0, 1), (0, 1)...
 
 
 
 # GET ASSIGNMENT COST
 def getAssignmentCost(solution, model, binary_vars):
 
-    original_bounds = [(v.LB, v.UB) for v in binary_vars]
+    bounds = [(i.LB, i.UB) for i in binary_vars] # (0, 1), (0, 1)...
     
     try:
-        for i, value in enumerate(solution):
+        for i, value in enumerate(solution): # e.g 0 or 1 according to solution
             binary_vars[i].LB = float(value)
             binary_vars[i].UB = float(value)
         
-        model.update()
-        model.optimize()
+        model.update() # Update the model with the new bounds
+        model.optimize() # Solve the model with the fixed binary variables 
         
-        return model.ObjVal if model.status == GRB.OPTIMAL else np.inf
+        return model.ObjVal if model.status == GRB.OPTIMAL else np.inf # Return cost if found feasible solution
         
     finally:
-        for i, (lb, ub) in enumerate(original_bounds):
+        for i in range(len(binary_vars)): # Restore original bounds
+            lb = bounds[i][0]
+            ub = bounds[i][1]
             binary_vars[i].LB = lb
             binary_vars[i].UB = ub
-        model.update()
+        model.update() # Again (0, 1), (0, 1)...
 
 ####################################################################################################################################
 
@@ -674,7 +678,7 @@ if __name__ == "__main__":
     # VNS METAHEURISTIC
     print("\n************************ VNS METAHEURISTIC ************************\n")
     if myopic_status:
-        vns_sol, vns_cost = VNS_algorithm(kmax=2, max_iterations=10, neighborhood_size=2, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
+        vns_sol, vns_cost = VNS_algorithm(kmax=10, max_iterations=50, neighborhood_size=4, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
 
         if vns_cost < best_heuristic_cost:
             best_heuristic_cost = vns_cost
