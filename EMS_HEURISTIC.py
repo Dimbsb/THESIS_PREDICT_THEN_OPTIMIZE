@@ -28,7 +28,7 @@ def check_feasibility(solution, model, binary_vars):
         return model.status == GRB.OPTIMAL # Return True if found feasible solution
             
     finally:
-        for i in range(len(binary_vars)): # Restore original bounds
+        for i in range(len(binary_vars)): # Restore original bounds(for bb to get 0..1 and not fixed)
             lb = bounds[i][0]
             ub = bounds[i][1]
             binary_vars[i].LB = lb
@@ -53,7 +53,7 @@ def getAssignmentCost(solution, model, binary_vars):
         return model.ObjVal if model.status == GRB.OPTIMAL else np.inf # Return cost if found feasible solution
         
     finally:
-        for i in range(len(binary_vars)): # Restore original bounds
+        for i in range(len(binary_vars)): # Restore original bounds(for bb to get 0..1 and not fixed)
             lb = bounds[i][0]
             ub = bounds[i][1]
             binary_vars[i].LB = lb
@@ -664,26 +664,26 @@ if __name__ == "__main__":
     
     myopic_status, myopic_solution, myopic_cost = myopic_heuristic(P, model, binary_vars)
     
-    best_heuristic_cost = np.inf
-    best_heuristic_solution = None
-    best_heuristic_status = False
+    heuristic_cost = np.inf
+    heuristic_solution = None
+    heuristic_status = False
     
-    if myopic_status and myopic_cost < best_heuristic_cost:
-        best_heuristic_cost = myopic_cost
-        best_heuristic_solution = myopic_solution.copy()
-        best_heuristic_status = True
+    if myopic_status and myopic_cost < heuristic_cost:
+        heuristic_cost = myopic_cost
+        heuristic_solution = myopic_solution.copy()
+        heuristic_status = True
         print(f"\nMYOPIC HEURISTIC COST: {myopic_cost:,.2f})")
     
  
     # VNS METAHEURISTIC
     print("\n************************ VNS METAHEURISTIC ************************\n")
     if myopic_status:
-        vns_sol, vns_cost = VNS_algorithm(kmax=10, max_iterations=50, neighborhood_size=4, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
+        vns_sol, vns_cost = VNS_algorithm(kmax=1, max_iterations=5, neighborhood_size=4, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
 
-        if vns_cost < best_heuristic_cost:
-            best_heuristic_cost = vns_cost
-            best_heuristic_solution = vns_sol.copy()
-            best_heuristic_status = True
+        if vns_cost < heuristic_cost:
+            heuristic_cost = vns_cost
+            heuristic_solution = vns_sol.copy()
+            heuristic_status = True
 
     
     # BRANCH & BOUND
@@ -692,8 +692,8 @@ if __name__ == "__main__":
     best_bound_per_depth = np.array([np.inf for _ in range(num_vars)])
     nodes_per_depth = [0 for i in range(num_vars)]
     
-    if best_heuristic_status:
-        upper_bound = best_heuristic_cost
+    if heuristic_status:
+        upper_bound = heuristic_cost
         print(f">>> WARM START B&B WITH UB = {upper_bound:,.2f}\n")
     else:
         upper_bound = np.inf
@@ -703,7 +703,7 @@ if __name__ == "__main__":
      
 
     # ΑΠΟΤΕΛΕΣΜΑΤΑ
-    print(f"HEURISTIC FOUND: {best_heuristic_cost:,.2f} CHF/year")
+    print(f"HEURISTIC FOUND: {heuristic_cost:,.2f} CHF/year")
     
     if solutions_found > 0:
         best_solution = solutions[np.argmin([s[1] for s in solutions])]
@@ -728,9 +728,9 @@ if __name__ == "__main__":
         optimal_cost = best_solution[1]
         print(f"OPTIMAL COST: {optimal_cost:,.2f} CHF/year")
         
-        if best_heuristic_status:
-            gap = ((best_heuristic_cost - optimal_cost) / optimal_cost) * 100
-            print(f"\nHEURISTIC:     {best_heuristic_cost:,.2f} CHF/year")
+        if heuristic_status:
+            gap = ((heuristic_cost - optimal_cost) / optimal_cost) * 100
+            print(f"\nHEURISTIC:     {heuristic_cost:,.2f} CHF/year")
             print(f"B&B OPTIMAL:   {optimal_cost:,.2f} CHF/year")  
             print(f"GAP:           {gap:.4f}%")
             
