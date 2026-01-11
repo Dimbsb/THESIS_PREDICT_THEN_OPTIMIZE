@@ -445,35 +445,6 @@ def create_ems_model(T=8760):
  
 #CUTS
 
-# === LOGICAL IMPLICATIONS ===
-    model.addConstr(binary_battery <= binary_pv + binary_fc, name="cut_battery_requires_source")
-    model.addConstr(binary_tank <= binary_fc + binary_boiler + binary_st, name="cut_tank_requires_heat_source")
-    model.addConstr(binary_fc + binary_hp + binary_boiler + binary_st >= 1, name="cut_min_heat_source")
-
-    # CUT 5: Fuel Cell capacity upper bound (based on max electricity demand)
-    max_electricity_demand = max(L_electricity)
-    model.addConstr(x_gas_fc <= max_electricity_demand / fc_h_el, name="cut_fc_max_cap")
-
-    # CUT 6: PV capacity upper bound (based on max solar radiation and demand)
-    max_solar_production = max(I_t) / 1000.0 * pv_h_el * pv_h_pr
-    if max_solar_production > 0:
-        model.addConstr(x_el_pv <= max_electricity_demand / max_solar_production * pv_p, 
-                        name="cut_pv_max_cap")
-
-    # CUT 7: Heat Pump capacity (based on max space heating demand)
-    max_space_heat_demand = max(L_sph)
-    model.addConstr(x_el_hp <= max_space_heat_demand / hp_h_cop, name="cut_hp_max_cap")
-
-    # CUT 8: Boiler capacity (based on max thermal demand)
-    max_thermal_demand = max(L_sph[t] + L_dhw[t] for t in range(T))
-    model.addConstr(x_gas_boiler <= max_thermal_demand / boiler_h, name="cut_boiler_max_cap")
-
-    # CUT 9: Battery capacity (based on daily electricity demand variation)
-    daily_electricity_demand = sum(L_electricity[:24]) * Dt / 3.6e6  # First day in kWh
-    model.addConstr(y_el_battery <= daily_electricity_demand * 3.6e6, name="cut_battery_max_cap")
-
- 
-
 ######################################################################################################
     print("CUSTOM CUTS OK")
 ######################################################################################################
