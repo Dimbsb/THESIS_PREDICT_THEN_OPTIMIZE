@@ -662,7 +662,10 @@ if __name__ == "__main__":
     # MYOPIC HEURISTIC
     print("\n************************ MYOPIC HEURISTIC ************************\n")
     
+    start_time = time.time()
     myopic_status, myopic_solution, myopic_cost = myopic_heuristic(P, model, binary_vars)
+    end_time = time.time()
+    print(f"\n--- MYOPIC TIME: {end_time - start_time:.2f} seconds ---\n")
     
     heuristic_cost = np.inf
     heuristic_solution = None
@@ -678,8 +681,11 @@ if __name__ == "__main__":
     # VNS METAHEURISTIC
     print("\n************************ VNS METAHEURISTIC ************************\n")
     if myopic_status:
+        start_time = time.time()
         vns_sol, vns_cost = VNS_algorithm(kmax=1, max_iterations=5, neighborhood_size=4, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
-
+        end_time = time.time()
+        print(f"\n--- VNS TIME: {end_time - start_time:.2f} seconds ---\n")
+        
         if vns_cost < heuristic_cost:
             heuristic_cost = vns_cost
             heuristic_solution = vns_sol.copy()
@@ -699,7 +705,10 @@ if __name__ == "__main__":
         upper_bound = np.inf
         print(f">>> STARTING B&B FROM SCRATCH (UB = INF)\n")
     
+    start_time = time.time()
     solutions, best_solution_index, solutions_found = branch_and_bound(model, ub, lb, integer_var, best_bound_per_depth, nodes_per_depth)
+    end_time = time.time()
+    print(f"\n--- B&B TIME: {end_time - start_time:.2f} seconds ---\n")
      
 
     # ΑΠΟΤΕΛΕΣΜΑΤΑ
@@ -736,3 +745,4 @@ if __name__ == "__main__":
             
     else:
         print("\nNO FEASIBLE SOLUTION FOUND IN B&B")
+        
