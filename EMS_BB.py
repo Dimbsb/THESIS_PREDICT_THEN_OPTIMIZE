@@ -195,16 +195,16 @@ def create_ems_model(T=8760):
     print("PARAMETERS OK")
 
     # lower bounds W
-    min_cap_fc = 0.1       
-    min_cap_pv = 0.1       
-    min_cap_st = 0.1       
-    min_cap_hp = 0.1       
-    min_cap_boiler = 0.1   
-    min_cap_battery = 0.1 * 3.6e6  
-    min_height_tank = 0.1    
+    min_cap_fc = 0.5       
+    min_cap_pv = 0.5       
+    min_cap_st = 0.5       
+    min_cap_hp = 0.5       
+    min_cap_boiler = 0.5   
+    min_cap_battery = 0.5 * 3.6e6  
+    min_height_tank = 0.5    
 
     # Big M  
-    Big_M = 40000.0   
+    Big_M = 15000.0   
     Big_M_Joules = 50.0 * 3.6e6  
     Big_M_meters = 5.0  
 
@@ -389,70 +389,80 @@ def create_ems_model(T=8760):
     # BINARY CONSTRAINTS 
     # Big_M 
     # Fuel Cell
-    model.addConstr(x_gas_fc <= Big_M * binary_fc, "fc_bin_ub")
+    model.addConstr(x_gas_fc <= Big_M * binary_fc, "fc_ub")
 
     # PV
-    model.addConstr(x_el_pv <= Big_M * binary_pv, name="pv_bin_ub")
+    model.addConstr(x_el_pv <= Big_M * binary_pv, name="pv_ub")
 
     # Solar Thermal
-    model.addConstr(x_th_st <= Big_M * binary_st, name="st_bin_ub")
+    model.addConstr(x_th_st <= Big_M * binary_st, name="st_ub")
 
     # Heat Pump
-    model.addConstr(x_el_hp <= Big_M * binary_hp, name="hp_bin_ub")
+    model.addConstr(x_el_hp <= Big_M * binary_hp, name="hp_ub")
 
     # Boiler
-    model.addConstr(x_gas_boiler <= Big_M * binary_boiler, name="boiler_bin_ub")
+    model.addConstr(x_gas_boiler <= Big_M * binary_boiler, name="boiler_ub")
 
     # Battery
-    model.addConstr(y_el_battery <= Big_M_Joules * binary_battery, name="battery_bin_ub")
+    model.addConstr(y_el_battery <= Big_M_Joules * binary_battery, name="battery_ub")
 
     # Tank
-    model.addConstr(y_h_tank <= Big_M_meters * binary_tank, name="tank_bin_ub")
+    model.addConstr(y_h_tank <= Big_M_meters * binary_tank, name="tank_ub")
+    
+    # Grid
+    #for t in range(T):
+        #model.addConstr(el_grid_in[t] <= 10000, name=f"grid_capacity_limit_{t}" )
 
         
     # BINARY CONSTRAINTS 
     # Capacity
     # Fuel Cell 
-    model.addConstr(x_gas_fc >= min_cap_fc * binary_fc, name="fc_bin_lb")
+    model.addConstr(x_gas_fc >= min_cap_fc * binary_fc, name="fc_lb")
     
     # PV
-    model.addConstr(x_el_pv >= min_cap_pv * binary_pv, name="pv_bin_lb")
+    model.addConstr(x_el_pv >= min_cap_pv * binary_pv, name="pv_lb")
     
     # Solar Thermal
-    model.addConstr(x_th_st >= min_cap_st * binary_st, name="st_bin_lb")
+    model.addConstr(x_th_st >= min_cap_st * binary_st, name="st_lb")
     
     # Heat Pump
-    model.addConstr(x_el_hp >= min_cap_hp * binary_hp, name="hp_bin_lb")
+    model.addConstr(x_el_hp >= min_cap_hp * binary_hp, name="hp_lb")
     
     # Boiler
-    model.addConstr(x_gas_boiler >= min_cap_boiler * binary_boiler, name="boiler_bin_lb")
+    model.addConstr(x_gas_boiler >= min_cap_boiler * binary_boiler, name="boiler_lb")
     
     # Battery
-    model.addConstr(y_el_battery >= min_cap_battery * binary_battery, name="battery_bin_lb")
+    model.addConstr(y_el_battery >= min_cap_battery * binary_battery, name="battery_lb")
     
     # Tank
-    model.addConstr(y_h_tank >= min_height_tank * binary_tank, name="tank_bin_lb") 
-     
+    model.addConstr(y_h_tank >= min_height_tank * binary_tank, name="tank_lb") 
     
+
     print("BINARY CONSTRAINTS OK")
 
         
 ######################################################################################################
-######################################################################################################
-######################################################################################################
-    print("CUSTOM CUTS")    
-######################################################################################################
- 
-#CUTS
-
+    #CUTS
+    model.addConstr(binary_boiler + binary_fc + binary_st >= 1, name="cut_hot_water") # cuts boiler=0, fc=0, st=0
+    
+    model.addConstr(binary_boiler + binary_fc + binary_hp + binary_st >= 1, name="cut_space_heat") # cuts boiler=0, fc=0, hp=0, st=0
+    
+    model.addConstr(binary_boiler + binary_fc + binary_hp + binary_st <= 3, name="cut_space_heat2") # cuts boiler=1, fc=1, hp=1, st=1
+    
+    model.addConstr(binary_tank <= binary_fc + binary_boiler + binary_st, name="tank_needs_source2") # cuts tank=1, fc=0, boiler=0, st=0
+    
+    model.addConstr(binary_boiler + binary_fc + binary_st <= 2 + (1 - binary_tank), name="dhw_tank_conditional_cut") # cuts boiler=1, fc=1, st=1, tank=1
+    
+    model.addConstr(binary_fc + binary_boiler + binary_st <= 2 + (1 - binary_hp), name="hp_backup_conditional_cut") # cuts fc=1, boiler=1, st=1, hp=1
+            
+    model.addConstr(binary_fc + binary_pv <= 1 + binary_battery, name="battery_enables_dual_sources_cut") # cuts fc=1, pv=1, battery=0
+    
 ######################################################################################################
     print("CUSTOM CUTS OK")
 ######################################################################################################
 ######################################################################################################
 ######################################################################################################
-            
-    
-     
+   
     
     
     # OBJECTIVE FUNCTION

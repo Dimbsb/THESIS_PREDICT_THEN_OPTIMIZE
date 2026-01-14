@@ -40,25 +40,25 @@ def check_feasibility(solution, model, binary_vars):
 # GET ASSIGNMENT COST
 def getAssignmentCost(solution, model, binary_vars):
 
-    bounds = [(i.LB, i.UB) for i in binary_vars] # (0, 1), (0, 1)...
+    bounds = [(i.LB, i.UB) for i in binary_vars] 
     
     try:
-        for i, value in enumerate(solution): # e.g 0 or 1 according to solution
+        for i, value in enumerate(solution): 
             binary_vars[i].LB = float(value)
             binary_vars[i].UB = float(value)
         
-        model.update() # Update the model with the new bounds
-        model.optimize() # Solve the model with the fixed binary variables 
+        model.update() 
+        model.optimize() 
         
         return model.ObjVal if model.status == GRB.OPTIMAL else np.inf # Return cost if found feasible solution
         
     finally:
-        for i in range(len(binary_vars)): # Restore original bounds(for bb to get 0..1 and not fixed)
+        for i in range(len(binary_vars)): 
             lb = bounds[i][0]
             ub = bounds[i][1]
             binary_vars[i].LB = lb
             binary_vars[i].UB = ub
-        model.update() # Again (0, 1), (0, 1)...
+        model.update() 
 
 ####################################################################################################################################
 
@@ -682,7 +682,7 @@ if __name__ == "__main__":
     print("\n************************ VNS METAHEURISTIC ************************\n")
     if myopic_status:
         start_time = time.time()
-        vns_sol, vns_cost = VNS_algorithm(kmax=1, max_iterations=5, neighborhood_size=4, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
+        vns_sol, vns_cost = VNS_algorithm(kmax=2, max_iterations=3, neighborhood_size=2, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
         end_time = time.time()
         print(f"\n--- VNS TIME: {end_time - start_time:.2f} seconds ---\n")
         
