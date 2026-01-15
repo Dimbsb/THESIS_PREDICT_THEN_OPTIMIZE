@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 import time
 import random
-import math
 from collections import deque
 from EMS_BB import create_ems_model
  
@@ -691,7 +690,7 @@ if __name__ == "__main__":
     print("\n************************ VNS METAHEURISTIC ************************\n")
     if myopic_status:
         start_time = time.time()
-        vns_sol, vns_cost = VNS_algorithm(kmax=2, max_iterations=2, neighborhood_size=3, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
+        vns_sol, vns_cost = VNS_algorithm(kmax=2, max_iterations=2, neighborhood_size=2, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
         end_time = time.time()
         print(f"\n--- VNS TIME: {end_time - start_time:.2f} seconds ---\n")
         

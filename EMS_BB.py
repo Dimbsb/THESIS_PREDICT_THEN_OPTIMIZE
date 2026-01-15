@@ -195,16 +195,16 @@ def create_ems_model(T=8760):
     print("PARAMETERS OK")
 
     # lower bounds W
-    min_cap_fc = 0.5      
-    min_cap_pv = 0.5     
-    min_cap_st = 0.5       
-    min_cap_hp = 0.5       
-    min_cap_boiler = 0.5   
+    min_cap_fc = 0.1      
+    min_cap_pv = 0.1     
+    min_cap_st = 0.1       
+    min_cap_hp = 0.1       
+    min_cap_boiler = 0.1   
     min_cap_battery = 0.5 * 3.6e6  
     min_height_tank = 0.5    
 
     # Big M  
-    Big_M = 20000.0   
+    Big_M = 40000.0   
     Big_M_Joules = 50.0 * 3.6e6  
     Big_M_meters = 5.0  
 
@@ -443,19 +443,17 @@ def create_ems_model(T=8760):
         
 ######################################################################################################
     #CUTS
-    model.addConstr(binary_boiler + binary_fc + binary_st >= 1, name="cut_hot_water") # cuts boiler=0, fc=0, st=0
+    model.addConstr(binary_boiler + binary_fc + binary_st >= 1, name="cut_1") # cuts boiler=0, fc=0, st=0
     
-    model.addConstr(binary_boiler + binary_fc + binary_hp + binary_st >= 1, name="cut_space_heat") # cuts boiler=0, fc=0, hp=0, st=0
+    model.addConstr(binary_boiler + binary_fc + binary_hp + binary_st >= 1, name="cut_2") # cuts boiler=0, fc=0, hp=0, st=0
     
-    model.addConstr(binary_boiler + binary_fc + binary_hp + binary_st <= 3, name="cut_space_heat2") # cuts boiler=1, fc=1, hp=1, st=1
+    model.addConstr(binary_boiler + binary_fc + binary_hp + binary_st <= 3, name="cut_3") # cuts boiler=1, fc=1, hp=1, st=1
     
-    model.addConstr(binary_tank <= binary_fc + binary_boiler + binary_st, name="tank_needs_source2") # cuts tank=1, fc=0, boiler=0, st=0
+    model.addConstr(binary_tank <= binary_fc + binary_boiler + binary_st, name="cut_4") # cuts tank=1, fc=0, boiler=0, st=0
     
-    model.addConstr(binary_boiler + binary_fc + binary_st <= 2 + (1 - binary_tank), name="dhw_tank_conditional_cut") # cuts boiler=1, fc=1, st=1, tank=1
-    
-    model.addConstr(binary_fc + binary_boiler + binary_st <= 2 + (1 - binary_hp), name="hp_backup_conditional_cut") # cuts fc=1, boiler=1, st=1, hp=1
-            
-    model.addConstr(binary_fc + binary_pv <= 1 + binary_battery, name="battery_enables_dual_sources_cut") # cuts fc=1, pv=1, battery=0
+    model.addConstr(binary_boiler + binary_fc + binary_st <= 2 + (1 - binary_tank), name="cut_5") # cuts boiler=1, fc=1, st=1, tank=1
+                
+    model.addConstr(binary_fc + binary_pv <= 1 + binary_battery, name="cut_6") # cuts fc=1, pv=1, battery=0
     
 ######################################################################################################
     print("CUSTOM CUTS OK")
