@@ -195,8 +195,8 @@ def create_ems_model(T=8760):
     print("PARAMETERS OK")
 
     # lower bounds W
-    min_cap_fc = 0.5       
-    min_cap_pv = 0.5       
+    min_cap_fc = 0.5      
+    min_cap_pv = 0.5     
     min_cap_st = 0.5       
     min_cap_hp = 0.5       
     min_cap_boiler = 0.5   
@@ -204,7 +204,7 @@ def create_ems_model(T=8760):
     min_height_tank = 0.5    
 
     # Big M  
-    Big_M = 15000.0   
+    Big_M = 20000.0   
     Big_M_Joules = 50.0 * 3.6e6  
     Big_M_meters = 5.0  
 

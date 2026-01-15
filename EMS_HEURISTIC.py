@@ -15,25 +15,29 @@ from EMS_BB import create_ems_model
 # CHECK FEASIBILITY 
 def check_feasibility(solution, model, binary_vars):
 
-    bounds = [(i.LB, i.UB) for i in binary_vars] # (0, 1), (0, 1)... for all binary vars
+    # Continuous (0, 1), (0, 1)... for all binary vars
+    bounds = [(i.LB, i.UB) for i in binary_vars] 
     
+    # 0 or 1 according to tempsol,new_sol,test_sol
     try:
-        for i, value in enumerate(solution): # e.g 0 or 1 according to solution
+        for i, value in enumerate(solution): 
             binary_vars[i].LB = float(value)
             binary_vars[i].UB = float(value)
         
         model.update() # Update the model with the new bounds
         model.optimize() # Solve the model with the fixed binary variables  
         
-        return model.status == GRB.OPTIMAL # Return True if found feasible solution
-            
+        # Return True if found feasible solution
+        return model.status == GRB.OPTIMAL 
+    
+    # Restore the bounds for the next calls         
     finally:
-        for i in range(len(binary_vars)): # Restore original bounds(for bb to get 0..1 and not fixed)
+        for i in range(len(binary_vars)):  
             lb = bounds[i][0]
             ub = bounds[i][1]
             binary_vars[i].LB = lb
             binary_vars[i].UB = ub
-        model.update() # Again (0, 1), (0, 1)...
+        model.update()  
 
 
 
@@ -50,8 +54,9 @@ def getAssignmentCost(solution, model, binary_vars):
         model.update() 
         model.optimize() 
         
-        return model.ObjVal if model.status == GRB.OPTIMAL else np.inf # Return cost if found feasible solution
+        return model.ObjVal if model.status == GRB.OPTIMAL else np.inf  
         
+         
     finally:
         for i in range(len(binary_vars)): 
             lb = bounds[i][0]
@@ -63,6 +68,7 @@ def getAssignmentCost(solution, model, binary_vars):
 ####################################################################################################################################
 
 # MYOPIC HEURISTIC
+# For each binary variable, try 0 and 1
 def myopic_heuristic(P, model, binary_vars):
     print("************************    Running myopic heuristic    ************************\n\n")
     
@@ -70,7 +76,6 @@ def myopic_heuristic(P, model, binary_vars):
     best_var_assignment_cost = np.inf
     value_selected = 0
     
-    # For each binary variable, try 0 and 1
     for i in range(P):
         best_var_assignment_cost = np.inf
         value_selected = 0
@@ -103,7 +108,7 @@ def VNS_algorithm(kmax, max_iterations, neighborhood_size, solution, solution_co
     neigborhoods = create_neighborhoods(kmax, P, neighborhood_size)
     while iterations < max_iterations:
         k = 0
-        # Explore until k = kmax. k is the size of the neighborhood.
+        # Explore until k = kmax. kmax is the number of the neighborhoods.
         while k < kmax:
             
             # Shaking current solution, to get a new point on search space
@@ -132,6 +137,7 @@ def VNS_algorithm(kmax, max_iterations, neighborhood_size, solution, solution_co
 
 
 # Create k neighborhoods
+# Each neighborhood contains a random sample of variables of size neighborhood_size
 def create_neighborhoods(k, P, neighborhood_size):
     vars = list(range(0, P))
     neighborhoods = []
@@ -144,6 +150,7 @@ def create_neighborhoods(k, P, neighborhood_size):
 
 
 # Local search in VNS
+# for each variable in the neighborhood, find the best value (0 or 1)
 def local_search_vns(neigborhood, solution, P, model, binary_vars):
     new_sol = np.copy(solution)
     for x in neigborhood:
@@ -155,6 +162,7 @@ def local_search_vns(neigborhood, solution, P, model, binary_vars):
 
 
 # Shaking function in VNS
+# randomly change the values of the variables in the neighborhood
 def shaking(solution, neighborhood, P, model, binary_vars):
     new_sol = np.copy(solution)
     i = 0
@@ -170,6 +178,7 @@ def shaking(solution, neighborhood, P, model, binary_vars):
 
 
 # find best value for variable x
+# try 0 and 1 and select the one with the best cost
 def find_best_val(x, solution, P, model, binary_vars):
     test_sol = np.copy(solution)   
     heur_cost = np.inf
@@ -682,7 +691,7 @@ if __name__ == "__main__":
     print("\n************************ VNS METAHEURISTIC ************************\n")
     if myopic_status:
         start_time = time.time()
-        vns_sol, vns_cost = VNS_algorithm(kmax=2, max_iterations=3, neighborhood_size=2, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
+        vns_sol, vns_cost = VNS_algorithm(kmax=2, max_iterations=2, neighborhood_size=3, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
         end_time = time.time()
         print(f"\n--- VNS TIME: {end_time - start_time:.2f} seconds ---\n")
         
