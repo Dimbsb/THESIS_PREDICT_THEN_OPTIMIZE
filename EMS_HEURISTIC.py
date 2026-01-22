@@ -6,7 +6,7 @@ import time
 import random
 from collections import deque
 from EMS_BB import create_ems_model
- 
+
 
 # MYOPIC HEURISTIC AND VNS METAHEURISTIC 
 #################################################################################################################################### 

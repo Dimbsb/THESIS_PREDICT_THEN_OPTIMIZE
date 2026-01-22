@@ -177,13 +177,13 @@ def create_ems_model(T=8760):
     grid_pco2 = 92.0
 
     # 3.13
-    U = 168.0
-    C = 10e6
+    U = 100.0
+    C = 12e6
 
     # 3.14 
-    c_T = 10.0
-    T_min = 18+273.15 
-    T_max = 28+273.15
+    c_T = 0.1
+    T_min = 14+273.15 
+    T_max = 36+273.15
 
     # SUM
     SOC_el = model.addVars(T, lb=0, vtype=GRB.CONTINUOUS, name="SOC_thermal")
@@ -195,12 +195,12 @@ def create_ems_model(T=8760):
     print("PARAMETERS OK")
 
     # lower bounds W
-    min_cap_fc = 0.1      
-    min_cap_pv = 0.1     
-    min_cap_st = 0.1       
-    min_cap_hp = 0.1       
-    min_cap_boiler = 0.1   
-    min_cap_battery = 0.5 * 3.6e6  
+    min_cap_fc = 1000      
+    min_cap_pv = 1000     
+    min_cap_st = 1000       
+    min_cap_hp = 1000       
+    min_cap_boiler = 1000   
+    min_cap_battery = 1 * 3.6e6  
     min_height_tank = 0.5    
 
     # Big M  
@@ -359,7 +359,7 @@ def create_ems_model(T=8760):
     model.addConstrs((dT[t] >= T_min - T_bdg[t] for t in range(T)), name="comfort_upper_bound")
 
     # 3.14
-    model.addConstrs((dT[t] >= 0 for t in range(T)), name="comfort_non_negative_rule")
+    model.addConstrs((dT[t] >= eps for t in range(T)), name="comfort_non_negative_rule")
     
     
     print("BUILDING CONSTRAINTS OK")

@@ -205,13 +205,13 @@ model.el_grid_connection_fee = pyomo.Param(initialize=85.0)
 model.grid_pco2 = pyomo.Param(initialize=92)
 
 # 3.13
-model.U = pyomo.Param(initialize=168.0)
-model.C = pyomo.Param(initialize=10e6)
+model.U = pyomo.Param(initialize=100.0)
+model.C = pyomo.Param(initialize=12e6)
 
 # 3.14 
-model.c_T = pyomo.Param(initialize=10.0)
-model.T_min = pyomo.Param(initialize=18+273.15)  
-model.T_max = pyomo.Param(initialize=28+273.15) 
+model.c_T = pyomo.Param(initialize=0.1)
+model.T_min = pyomo.Param(initialize=14+273.15)  
+model.T_max = pyomo.Param(initialize=36+273.15) 
 
 # SUM
 model.SOC_el = pyomo.Var(model.T, domain=pyomo.NonNegativeReals)
@@ -223,13 +223,13 @@ model.co2_price = pyomo.Param(initialize=0.06)
 print("PARAMETERS OK")
 
 # lower bounds 
-min_cap_fc = 0.1     
-min_cap_pv = 0.1       
-min_cap_st = 0.1       
-min_cap_hp = 0.1       
-min_cap_boiler = 0.1   
-min_cap_batt = 0.1 * 3.6e6  #0.1 kwh
-min_height_tank = 0.1    
+min_cap_fc = 1000     
+min_cap_pv = 1000       
+min_cap_st = 1000       
+min_cap_hp = 1000       
+min_cap_boiler = 1000   
+min_cap_batt = 1 * 3.6e6  #1 kwh
+min_height_tank = 0.5    
 
 # Big M  
 Big_M = 40000.0   
@@ -486,7 +486,7 @@ model.constraint_comfort_upper = pyomo.Constraint(model.T, rule=comfort_upper_bo
 
 # 3.14 
 def comfort_non_negative_rule(model, t):
-    return model.dT[t] >= 0
+    return model.dT[t] >= eps
 model.constraint_comfort_non_negative = pyomo.Constraint(model.T, rule=comfort_non_negative_rule)
 
 print("BUILDING CONSTRAINTS OK")
@@ -702,3 +702,6 @@ print("="*40)
 total_cost = pyomo.value(model.objective)
 print(f"TOTAL ANNUALIZED COST:          {total_cost:,.2f} CHF/year")
 print("="*40)
+
+
+
