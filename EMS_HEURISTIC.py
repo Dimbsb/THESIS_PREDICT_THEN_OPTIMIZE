@@ -690,7 +690,7 @@ if __name__ == "__main__":
     print("\n************************ VNS METAHEURISTIC ************************\n")
     if myopic_status:
         start_time = time.time()
-        vns_sol, vns_cost = VNS_algorithm(kmax=2, max_iterations=2, neighborhood_size=2, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
+        vns_sol, vns_cost = VNS_algorithm(kmax=3, max_iterations=2, neighborhood_size=2, solution=myopic_solution, solution_cost=myopic_cost, P=P, model=model, binary_vars=binary_vars)
         end_time = time.time()
         print(f"\n--- VNS TIME: {end_time - start_time:.2f} seconds ---\n")
         
@@ -750,6 +750,7 @@ if __name__ == "__main__":
             print(f"\nHEURISTIC:     {heuristic_cost:,.2f} CHF/year")
             print(f"B&B OPTIMAL:   {optimal_cost:,.2f} CHF/year")  
             print(f"GAP:           {gap:.4f}%")
+            print(f"NODES VISITED:  {nodes}")
             
     else:
         print("\nNO FEASIBLE SOLUTION FOUND IN B&B")
