@@ -704,4 +704,3 @@ print(f"TOTAL ANNUALIZED COST:          {total_cost:,.2f} CHF/year")
 print("="*40)
 
 
-
