@@ -6,7 +6,7 @@ Link overleaf PPTX: https://www.overleaf.com/project/697be9fd58c35725e81208cf
 
 Κώδικας 1ου παραδοτέου: EMS_2037.py
 
-Κώδικας 2ου παραδοτέου: EMS_BB.py - BB.py  
+Κώδικας 2ου παραδοτέου: EMS_BB.py - BB.py(Για να τρέξει πρέπει να αφαιρεθεί το binary_vars επιστρέφεται στο EMS_BB.py)  
 
 Κώδικας 3ου παραδοτέου: EMS_BB.py - EMS_BEST_FIRST.py - (DFS - EMS_HEURISTIC.py)
 
