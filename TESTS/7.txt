@@ -1,0 +1,19 @@
+========================================
+TIMES:
+Myopic Time:     65.30s
+VNS Time:        233.99s
+B&B Time:        12.10s
+Total Time:      311.39s
+========================================
+VNS PARAMETERS:
+kmax: 5
+max_iterations: 2
+neighborhood_size: 1
+========================================
+MODEL PARAMETERS:
+U = 168
+C = 40000000.0
+c_T = 0.1
+T_min = 14
+T_max = 36
+========================================

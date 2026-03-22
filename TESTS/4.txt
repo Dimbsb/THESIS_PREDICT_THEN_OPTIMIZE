@@ -1,0 +1,36 @@
+========================================
+TIMES:
+Myopic Time:     60.95s
+VNS Time:        50.34s
+B&B Time:        16.61s
+Total Time:      127.90s
+========================================
+VNS PARAMETERS:
+kmax: 3
+max_iterations: 1
+neighborhood_size: 1
+========================================
+MODEL PARAMETERS:
+U = 180
+C = 40000000.0
+c_T = 0.1
+T_min = 14
+T_max = 36
+========================================
+
+************************ ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ ************************
+
+Fuel Cell:     0.00 kW
+PV:            0.00 kWp
+Solar Thermal: 0.00 m²
+Heat Pump:     1.00 kW
+GRID:          9.00 kW
+Boiler:        4.29 kW
+Battery:       0.00 kWh
+Tank height:   0.00 m
+COST BB: 3,169.49 CHF/year
+
+HEURISTIC:     3,499.41 CHF/year
+B&B OPTIMAL:   3,169.49 CHF/year
+GAP BETWEEN HEURISTIC AND BB:           10.4093%
+NODES VISITED: 6
