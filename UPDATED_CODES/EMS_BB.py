@@ -11,30 +11,31 @@ def create_ems_model(T=8760):
     model = gp.Model("EMS")
     model.Params.OutputFlag = 0   
     
-    eps = np.finfo(float).eps
+    # eps = np.finfo(float).eps
+    eps = 1e-15
     
     # SOLAR RADIATION DATA FROM CSV FILE
-    solar_data = pd.read_csv("SOLAR_DATA_OK.csv", parse_dates=["datetime"])
+    solar_data = pd.read_csv("SOLAR_DATA_ATH.csv", parse_dates=["datetime"])
     solar_data = solar_data.set_index("datetime").resample("h").mean().iloc[:T]
     I_t = solar_data["GHI"].values
     
     # ELECTRICITY DEMAND
-    electricity_demand = pd.read_csv("ELECTRICITY_OK.csv", parse_dates=["datetime"])
+    electricity_demand = pd.read_csv("ELECTRICITY_ATH.csv", parse_dates=["datetime"])
     electricity_demand = electricity_demand.set_index("datetime").resample("h").mean().iloc[:T]
     L_electricity = electricity_demand["load_W"].values
     
     # DHW DEMAND 
-    dhw_demand = pd.read_csv("DHW_OK.csv", parse_dates=["datetime"])
+    dhw_demand = pd.read_csv("DHW_ATH.csv", parse_dates=["datetime"])
     dhw_demand = dhw_demand.set_index("datetime").resample("h").mean().iloc[:T]
     L_dhw = dhw_demand["dhw_W"].values
     
     # SPACE HEAT DEMAND
-    sph_demand = pd.read_csv("SPACE_HEAT_OK.csv", parse_dates=["datetime"])
+    sph_demand = pd.read_csv("SPACE_HEAT_ATH.csv", parse_dates=["datetime"])
     sph_demand = sph_demand.set_index("datetime").resample("h").mean().iloc[:T]
     L_sph = sph_demand["Q_space_W"].values 
     
     # TEMPERATURE DATA
-    temperature_demand = pd.read_csv("TEMPERATURES_OK.csv", parse_dates=["datetime"])
+    temperature_demand = pd.read_csv("TEMPERATURES_ATH.csv", parse_dates=["datetime"])
     temperature_demand = temperature_demand.set_index("datetime").resample("h").mean().iloc[:8760]
     Tamb = temperature_demand["Tamb_C"].values + 273.15
     Tcoll = temperature_demand["Tcoll_C"].values + 273.15
@@ -234,7 +235,7 @@ def create_ems_model(T=8760):
         model.addConstr(x_sph_out_fc[t] + x_dhw_out_fc[t] <= fc_h_th * x_gas_in_fc[t], name=f"fc_heat_ub{t}")
     
         # 3.3  
-        model.addConstr(x_el_out_pv[t] <= (pv_h_el * pv_h_pr * (I_t[t] / 1000.0) * (x_el_pv / pv_p)), name=f"pv_electricity_ub{t}")
+        model.addConstr(x_el_out_pv[t] <= (pv_h_el * pv_h_pr * (I_t[t]) * (x_el_pv / pv_p)), name=f"pv_electricity_ub{t}")
         
         # 3.3  
         model.addConstr(x_el_out_pv[t] >= eps, name=f"pv_electricity_lb{t}")
