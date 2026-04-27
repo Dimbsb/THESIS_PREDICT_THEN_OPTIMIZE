@@ -1,0 +1,33 @@
+===== exp_0028 =====
+CONTEXT: house=HOUSE3, location=THESS
+CHANGES APPLIED:
+   electricity=1.0, dhw=1.0, space_heat=1.0
+   C=17000000.0, T_max=300.15, T_min=292.15, U=80, c_T=0.1, el_grid_cost=50
+
+MYOPIC HEURISTIC FOUND: 5,036.70 CHF/year
+META-HEURISTIC FOUND: 5,036.70 CHF/year
+
+************************ ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ ************************
+
+Fuel Cell Capacity:         3.84 kW
+PV Capacity:                0.00 kWp
+Solar Thermal Area:         0.00 m²
+Heat Pump Capacity:         0.00 kW
+Grid Connection Size:       0.29 kW
+Gas Boiler Capacity:        0.00 kW
+Battery Capacity:           0.00 kWh
+Thermal Tank Height:        0.50 m
+Thermal Tank Volume:        251 Liters
+
+--- COMFORT ---
+Hours with penalty (dT>0):  6144 / 8760
+Total penalty cost:         1,763.10 CHF/year
+Clean energy cost:          3,273.60 CHF/year
+
+--- TIMES ---
+Myopic Heuristic Time:      106.57 seconds
+VNS Metaheuristic Time:     160.11 seconds
+Branch & Bound Time:        373.90 seconds
+NODES VISITED: 23
+
+HEURISTIC INCUMBENT COST: 5,036.70 CHF/year
