@@ -469,7 +469,6 @@ def create_ems_model(T: int, I_t: np.ndarray, Tamb: np.ndarray, Tcoll: np.ndarra
 
     print("OBJECTIVE OK")
  
-
     model.update()  
 
     # To get variables
