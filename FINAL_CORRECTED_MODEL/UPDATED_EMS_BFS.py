@@ -305,7 +305,7 @@ def branch_and_bound(model, ub, lb, integer_var, vbasis=[], cbasis=[], depth=0, 
         else:
             if DEBUG_MODE:
                 debug_print(node=root_node, sol_status="Infeasible")
-            return [], -np.inf, depth
+            return [], np.inf, depth
 
 
 
