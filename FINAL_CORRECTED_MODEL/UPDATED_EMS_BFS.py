@@ -301,11 +301,11 @@ def branch_and_bound(model, ub, lb, integer_var, vbasis=[], cbasis=[], depth=0, 
         if isMax:
             if DEBUG_MODE:
                 debug_print(node=root_node, sol_status="Infeasible")
-            return [], -1, 0
+            return [], -np.inf, depth
         else:
             if DEBUG_MODE:
                 debug_print(node=root_node, sol_status="Infeasible")
-            return [], -1, 0
+            return [], -np.inf, depth
 
 
 
