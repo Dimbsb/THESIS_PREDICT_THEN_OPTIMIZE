@@ -663,7 +663,7 @@ def solve_instance(inputs: dict) -> dict:
             
             dT_vals = [solution_dict.get(f'dT[{t}]', 0) for t in range(T)]
             penalty_hours = sum(1 for v in dT_vals if v > 1e-6)
-            total_penalty_cost = 0.1 * sum(dT_vals)  # c_T * sum(dT)
+            total_penalty_cost = 0.1 * sum(dT_vals)   
             print(f"\n--- COMFORT ---")
             print(f"Hours with penalty (dT>0):  {penalty_hours} / {T}")
             print(f"Total penalty cost:         {total_penalty_cost:,.2f} CHF/year")
@@ -698,7 +698,7 @@ def solve_instance(inputs: dict) -> dict:
                     binary_vars[i].UB = float(val)
                 model.update()
                 model.optimize()
-                heuristic_solution_dict = {v.VarName: v.X for v in model.getVars()}
+                heuristic_solution_update = {v.VarName: v.X for v in model.getVars()}
             finally:
                 for i, v in enumerate(binary_vars):
                     v.LB = bounds[i][0]
@@ -707,18 +707,18 @@ def solve_instance(inputs: dict) -> dict:
 
             print("\n************************ ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ ************************\n")
             try:
-                print(f"Fuel Cell Capacity:         {heuristic_solution_dict.get('x_gas_fc',     0)/1000:.2f} kW")
-                print(f"PV Capacity:                {heuristic_solution_dict.get('x_el_pv',      0)/1000:.2f} kWp")
-                print(f"Solar Thermal Area:         {heuristic_solution_dict.get('x_th_st',      0)/650:.2f} m²")
-                print(f"Heat Pump Capacity:         {heuristic_solution_dict.get('x_el_hp',      0)/1000:.2f} kW")
-                grid_kw = max(heuristic_solution_dict.get(f'el_grid_in[{t}]', 0) for t in range(T)) / 1000
+                print(f"Fuel Cell Capacity:         {heuristic_solution_update.get('x_gas_fc',     0)/1000:.2f} kW")
+                print(f"PV Capacity:                {heuristic_solution_update.get('x_el_pv',      0)/1000:.2f} kWp")
+                print(f"Solar Thermal Area:         {heuristic_solution_update.get('x_th_st',      0)/650:.2f} m²")
+                print(f"Heat Pump Capacity:         {heuristic_solution_update.get('x_el_hp',      0)/1000:.2f} kW")
+                grid_kw = max(heuristic_solution_update.get(f'el_grid_in[{t}]', 0) for t in range(T)) / 1000
                 print(f"Grid Connection Size:       {grid_kw:.2f} kW")
-                print(f"Gas Boiler Capacity:        {heuristic_solution_dict.get('x_gas_boiler', 0)/1000:.2f} kW")
-                print(f"Battery Capacity:           {heuristic_solution_dict.get('y_el_battery', 0)/3.6e6:.2f} kWh")
-                print(f"Thermal Tank Height:        {heuristic_solution_dict.get('y_h_tank',     0):.2f} m")
-                print(f"Thermal Tank Volume:        {heuristic_solution_dict.get('y_h_tank', 0) * np.pi * (0.80/2.0)**2 * 1000:.0f} Liters")
+                print(f"Gas Boiler Capacity:        {heuristic_solution_update.get('x_gas_boiler', 0)/1000:.2f} kW")
+                print(f"Battery Capacity:           {heuristic_solution_update.get('y_el_battery', 0)/3.6e6:.2f} kWh")
+                print(f"Thermal Tank Height:        {heuristic_solution_update.get('y_h_tank',     0):.2f} m")
+                print(f"Thermal Tank Volume:        {heuristic_solution_update.get('y_h_tank', 0) * np.pi * (0.80/2.0)**2 * 1000:.0f} Liters")
 
-                dT_vals = [heuristic_solution_dict.get(f'dT[{t}]', 0) for t in range(T)]
+                dT_vals = [heuristic_solution_update.get(f'dT[{t}]', 0) for t in range(T)]
                 penalty_hours = sum(1 for v in dT_vals if v > 1e-6)
                 total_penalty_cost = 0.1 * sum(dT_vals)
                 print(f"\n--- COMFORT ---")
