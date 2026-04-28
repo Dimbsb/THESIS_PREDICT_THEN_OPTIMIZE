@@ -1,5 +1,5 @@
 ===== exp_0019 =====
-CONTEXT: house=HOUSE2, location=THESS
+house=HOUSE2, location=THESS
 CHANGES APPLIED:
    electricity=1.3, dhw=1.3, space_heat=1.3
    C=40000000.0, T_max=300.15, T_min=292.15, U=150, c_T=0.1
