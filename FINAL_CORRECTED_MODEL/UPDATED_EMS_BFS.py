@@ -656,7 +656,7 @@ def solve_instance(inputs: dict) -> dict:
             print(f"Grid Connection Size:       {grid_kw:.2f} kW")
             print(f"Gas Boiler Capacity:        {solution_dict.get('x_gas_boiler', 0)/1000:.2f} kW")
             print(f"Battery Capacity:           {solution_dict.get('y_el_battery', 0)/3.6e6:.2f} kWh")
-            print(f"Thermal Tank height:        {solution_dict.get('y_h_tank',     0):.2f} m")
+            print(f"Thermal Tank Height:        {solution_dict.get('y_h_tank',     0):.2f} m")
             print(f"Thermal Tank Volume:        {solution_dict.get('y_h_tank', 0) * np.pi * (0.80/2.0)**2 * 1000:.0f} Liters")
 
             best_bb_cost = best_solution[1]

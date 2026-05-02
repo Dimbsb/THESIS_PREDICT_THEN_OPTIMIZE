@@ -34,8 +34,7 @@ def create_ems_model(T: int, I_t: np.ndarray, Tamb: np.ndarray, Tcoll: np.ndarra
 
 
     model = gp.Model("EMS")
-    model.Params.OutputFlag = 0
-    model.Params.Method = 2        
+    model.Params.OutputFlag = 0       
     
     # Decision Variables
     # Fuel Cell
