@@ -1,10 +1,10 @@
 # EMS BRANCH & BOUND WITH BEST-FIRST SEARCH
-from gurobipy import GRB
-import numpy as np
 import time
-import random
 import heapq
+import random
 import itertools
+import numpy as np
+from gurobipy import GRB
 from UPDATED_EMS_BB import create_ems_model, load_data
 ########################################################################################################
 
@@ -692,7 +692,9 @@ def solve_instance(inputs: dict) -> dict:
             print(f"NODES VISITED: {nodes}")
 
         result = {"bb_cost": best_bb_cost, "stats": stats}
+        
 ########################################################################################################
+
     else:
         if heuristic_status:
             print("\nNO IMPROVING INTEGER SOLUTION FOUND IN B&B")
