@@ -1,12 +1,12 @@
 #A linear programming approach to the optimization of residential energy systems
-import pyomo.environ as pyomo 
+import os
+import time
+import math
+import argparse
 import numpy as np
 import pandas as pd
-import math
 from math import pi
-import time
-import argparse
-import os
+import pyomo.environ as pyomo 
 from pyomo.environ import SolverFactory
 ########################################################################################################
 
