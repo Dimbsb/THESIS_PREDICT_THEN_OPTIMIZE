@@ -3,6 +3,8 @@ import os
 import numpy as np
 import pandas as pd
 from xgboost import XGBRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.neural_network import MLPRegressor
 from UPDATED_EMS_BFS import solve_instance
 from UPDATED_EMS_BB import load_data as ems_load_data
 from sklearn.metrics import r2_score, mean_squared_error
@@ -46,7 +48,8 @@ def Time_Features(df):
 def Building(df, building_name):
     building_specs = {"HOUSE1": {"U": 93, "C": 27 * 1e6}, "HOUSE2": {"U": 150, "C": 40 * 1e6}, "HOUSE3": {"U": 80, "C": 17 * 1e6}}
 
-    specs = building_specs.get(building_name, {"U": 93, "C": 27 * 1e6})
+    base_building_name = building_name.split(".")[0]
+    specs = building_specs.get(base_building_name, {"U": 93, "C": 27 * 1e6})
     df["U"] = specs["U"]
     df["C"] = specs["C"] / 1e6
     return df
@@ -77,7 +80,9 @@ def train_and_predict(train_df, test_df):
         y_train = train_df[target_col]
         y_test = test_df[target_col]
   
-        model = XGBRegressor(objective="reg:squarederror", n_estimators=500, learning_rate=0.05, random_state=42)
+        #model = XGBRegressor(objective="reg:squarederror", n_estimators=500, learning_rate=0.05, random_state=42)
+        model = RandomForestRegressor(n_estimators=500, random_state=42, n_jobs=-1)
+        #model = MLPRegressor(hidden_layer_sizes=(128, 64), max_iter=500, random_state=42)
         model.fit(X_train, y_train)
 
         y_pred_test = model.predict(X_test)
@@ -94,77 +99,86 @@ if __name__ == "__main__":
     locations = ["THESS", "ATH"]
     noise_levels = [0.0, 0.20]
     T = 8760
-    train_data_directory = "~/DB_WORKSPACE"
-    train_houses = [os.path.expanduser(f"{train_data_directory}/HOUSE1"), os.path.expanduser(f"{train_data_directory}/HOUSE2")]
-    test_data_directory = os.path.expanduser(f"{train_data_directory}/HOUSE3")
+    data_directory = os.path.expanduser("~/DB_WORKSPACE")
+    house_scenarios = {
+        "HOUSE1": {"train": ["HOUSE1", "HOUSE1.2"], "test": "HOUSE1.1"},
+        "HOUSE2": {"train": ["HOUSE2", "HOUSE2.2"], "test": "HOUSE2.1"},
+        "HOUSE3": {"train": ["HOUSE3", "HOUSE3.2"], "test": "HOUSE3.1"}
+        }
 
+# Noise
     def add_noise(prediction_array, level):
         noise = np.random.normal(loc=0, scale=level * np.std(prediction_array), size=prediction_array.shape)
         return np.clip(prediction_array + noise, 0, None)
 
-    for location in locations:
-        print("\n" + "=" * 60)
-        print("--------- Predict then Optimize ---------")
-        print("=" * 60)
+    for scenario_name, scenario in house_scenarios.items():
+        train_houses = [os.path.join(data_directory, house_name) for house_name in scenario["train"]]
+        test_data_directory = os.path.join(data_directory, scenario["test"])
 
-        # Build training set with HOUSE1 and HOUSE2 and test on HOUSE3
-        train_frames = []
-        for house_direction in train_houses:
-            train_frames.append(Building_features(location, T, house_direction))
+        for location in locations:
+            print("\n" + "=" * 60)
+            print(f"----- Predict then Optimize: {scenario_name} -----")
+            print("=" * 60)
+            print(f"Train houses: {', '.join(scenario['train'])}")
+            print(f"Test house:   {scenario['test']}")
 
-        train_df = pd.concat(train_frames, axis=0).sort_index()
-        test_df = Building_features(location, T, test_data_directory)
+            train_frames = []
+            for house_direction in train_houses:
+                train_frames.append(Building_features(location, T, house_direction))
 
-        r2_score_result, y_prediction = train_and_predict(train_df, test_df)
+            train_df = pd.concat(train_frames, axis=0).sort_index()
+            test_df = Building_features(location, T, test_data_directory)
 
-        electricity_score = f"[{location}] Forecast r2 (Electricity): {r2_score_result['load_W']['r2']:.4f}   RMSE: {r2_score_result['load_W']['rmse']:.2f} W"
-        dhw_score = f"[{location}] Forecast r2 (Hot water):   {r2_score_result['dhw_W']['r2']:.4f}   RMSE: {r2_score_result['dhw_W']['rmse']:.2f} W"
-        sph_score = f"[{location}] Forecast r2 (Space Heat):  {r2_score_result['Q_space_W']['r2']:.4f}   RMSE: {r2_score_result['Q_space_W']['rmse']:.2f} W"
-        print(electricity_score)
-        print(dhw_score)
-        print(sph_score)
+            r2_score_result, y_prediction = train_and_predict(train_df, test_df)
 
-########################################################################################################
-
-        # PERFECT INFORMATION
-        print(f"\nPerfect Information {location}")
-
-        perfect_data = ems_load_data(location, T, test_data_directory)
-        perfect_result = solve_instance(inputs=perfect_data)
-        perfect_cost = perfect_result["bb_cost"]
-
-        if not np.isfinite(perfect_cost):
-            perfect_cost = None
+            electricity_score = f"[{location}] Forecast r2 (Electricity): {r2_score_result['load_W']['r2']:.4f}   RMSE: {r2_score_result['load_W']['rmse']:.2f} W"
+            dhw_score = f"[{location}] Forecast r2 (Hot water):   {r2_score_result['dhw_W']['r2']:.4f}   RMSE: {r2_score_result['dhw_W']['rmse']:.2f} W"
+            sph_score = f"[{location}] Forecast r2 (Space Heat):  {r2_score_result['Q_space_W']['r2']:.4f}   RMSE: {r2_score_result['Q_space_W']['rmse']:.2f} W"
+            print(electricity_score)
+            print(dhw_score)
+            print(sph_score)
 
 ########################################################################################################
 
-        # FORECASTED INFORMATION
-        for noise in noise_levels:
-            forecast_line = f"Forecasted Demand with Noise={noise*100:.0f}% for {location}"
-            print(f"\n{forecast_line}")
+# PERFECT INFORMATION
+            print(f"\nPerfect Information {location}")
+            print("-" * 40)
+            perfect_data = ems_load_data(location, T, test_data_directory)
+            perfect_result = solve_instance(inputs=perfect_data)
+            perfect_cost = perfect_result["bb_cost"]
 
-            predicted_data = ems_load_data(location, T, test_data_directory)
-            predicted_data["L_electricity"] = add_noise(y_prediction["load_W"], noise)
-            predicted_data["L_dhw"] = add_noise(y_prediction["dhw_W"], noise)
-            predicted_data["L_sph"] = add_noise(y_prediction["Q_space_W"], noise)
-
-            prediction_result = solve_instance(inputs=predicted_data)
-            prediction_cost = prediction_result["bb_cost"]
-
-            if not np.isfinite(prediction_cost):
-                continue
+            if not np.isfinite(perfect_cost):
+                perfect_cost = None
 
 ########################################################################################################
 
-            # ΑΠΟΤΕΛΕΣΜΑΤΑ
-            if perfect_cost is not None and prediction_cost is not None:
-                cost_gap = prediction_cost - perfect_cost
-
-                print("\n" + "-" * 40)
-                print(f"ΑΠΟΤΕΛΕΣΜΑΤΑ [{location}]")
-                print(f"Noise Level: {noise*100:.0f}%")
+# FORECASTED INFORMATION
+            for noise in noise_levels:
+                forecast_line = f"Forecasted Demand with Noise={noise*100:.0f}% for {location}"
+                print(f"\n{forecast_line}")
                 print("-" * 40)
-                print(f"Perfect information:            {perfect_cost:,.2f} CHF")
-                print(f"Forecasted information:         {prediction_cost:,.2f} CHF")
-                print(f"Forecast - Perfect Info:        {cost_gap:,.2f} CHF")
-                print("-" * 40 + "\n")
+                predicted_data = ems_load_data(location, T, test_data_directory)
+                predicted_data["L_electricity"] = add_noise(y_prediction["load_W"], noise)
+                predicted_data["L_dhw"] = add_noise(y_prediction["dhw_W"], noise)
+                predicted_data["L_sph"] = add_noise(y_prediction["Q_space_W"], noise)
+
+                prediction_result = solve_instance(inputs=predicted_data)
+                prediction_cost = prediction_result["bb_cost"]
+
+                if not np.isfinite(prediction_cost):
+                    continue
+
+########################################################################################################
+
+# ΑΠΟΤΕΛΕΣΜΑΤΑ
+                if perfect_cost is not None and prediction_cost is not None:
+                    cost_gap = prediction_cost - perfect_cost
+
+                    print("\n" + "-" * 40)
+                    print(f"ΑΠΟΤΕΛΕΣΜΑΤΑ [{location}]")
+                    print(f"Noise Level: {noise*100:.0f}%")
+                    print("-" * 40)
+                    print(f"Perfect information:            {perfect_cost:,.2f} CHF")
+                    print(f"Forecasted information:         {prediction_cost:,.2f} CHF")
+                    print(f"Forecast - Perfect Info:        {cost_gap:,.2f} CHF")
+                    print("-" * 40 + "\n")
