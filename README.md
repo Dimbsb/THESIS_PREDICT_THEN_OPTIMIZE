@@ -10,6 +10,7 @@ This project focuses on **energy management systems** through mathematical model
 
 -  **Energy System Modeling**   
 -  **Optimization Framework**
+-  **Prediction**
   
 ---
 
@@ -17,7 +18,8 @@ This project focuses on **energy management systems** through mathematical model
 
 -  **Python**  
 -  **Pyomo**   
--  **Gurobi**   
+-  **Gurobi**
+-  **RandomForestRegressor**  
 
 ---
 
