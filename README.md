@@ -19,6 +19,12 @@ This project focuses on **energy management systems** through mathematical model
 -  **Python**  
 -  **Pyomo**   
 -  **Gurobi**
+-  **Gurobipy**
+-  **Branch and Bound**
+-  **Myopic heuristic**
+-  **VNS Meta-heuristic**
+-  **Binary variables**
+-  **Custom cuts**
 -  **RandomForestRegressor**  
 
 ---
