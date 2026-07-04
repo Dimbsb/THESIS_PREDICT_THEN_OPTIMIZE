@@ -1,89 +1,89 @@
-# Predict-then-Optimize Προσέγγιση για Ενεργειακά Συστήματα
+# Predict-then-Optimize Approach for Energy Systems
 
-## Περιγραφή
+## Description
 
-Διπλωματική εργασία με τίτλο **"Predict then Optimize Προσέγγιση για Ενεργειακά Συστήματα"** του Μπίσμπα Δημητρίου, στο Τμήμα Ηλεκτρολόγων Μηχανικών & Μηχανικών Υπολογιστών του Πανεπιστημίου Δυτικής Μακεδονίας.
+Diploma thesis titled **"Predict then Optimize Approach for Energy Systems"** by Bispas Dimitrios, at the Department of Electrical & Computer Engineering of the University of Western Macedonia.
  
-Στόχος είναι η βέλτιστη διαστασιολόγηση και λειτουργία ενεργειακών συστημάτων κατοικιών (κυψέλη καυσίμου, φωτοβολταϊκά, θερμοσίφωνας, αντλία θερμότητας, λέβητας φυσικού αερίου, μπαταρία, θερμική δεξαμενή) ελαχιστοποιώντας το ετήσιο κόστος, μέσω:
-- **Πρόβλεψης** ζήτησης (Random Forest) για ηλεκτρισμό, ζεστό νερό και θέρμανση χώρου
-- **Βελτιστοποίησης** με MILP (Mixed Integer Linear Programming) χρησιμοποιώντας:
-  - Εμπορικό επιλυτή **Gurobi**
-  - Custom **Branch & Bound με Best-First Search** με ευρετικές και μεθευρετικές μεθόδους (Myopic, VNS)
+The objective is the optimal sizing and operation of residential energy systems (fuel cell, photovoltaics, solar water heater, heat pump, natural gas boiler, battery, thermal storage tank) by minimizing the annual cost, via:
+- **Prediction** of demand (Random Forest) for electricity, hot water, and space heating
+- **Optimization** with MILP (Mixed Integer Linear Programming) using:
+  - Commercial solver **Gurobi**
+  - Custom **Branch & Bound with Best-First Search** with heuristic and metaheuristic methods (Myopic, VNS)
 
 ---
 
-## Δομή Αρχείων
+## File Structure
 
 ```
 .
-├── README.md                           # Το παρόν αρχείο
-├── THESIS_PREDICT_THEN_OPTIMIZE.pdf    # Το κείμενο της διπλωματικής (165 σελίδες)
-├── THESIS_PPTX.pdf                     # Το power point της διπλωματικής  
+├── README.md                           # This file
+├── THESIS_PREDICT_THEN_OPTIMIZE.pdf    # The thesis text (165 pages)
+├── THESIS_PPTX.pdf                     # The thesis PowerPoint presentation  
 │
-├── LATEX_SOURCES/                      # Οι πηγαίοι κώδικες LaTeX
-│   ├── thesis.tex                      # Κύριο αρχείο διπλωματικής
-│   ├── presentation.tex                # Παρουσίαση (Beamer)
-│   ├── appendix_all.tex                # Παραρτήματα
-│   ├── refs.bib                        # Βιβλιογραφία (BibTeX)
-│   └── images/                         # Εικόνες και διαγράμματα
-│       Λοιπά αρχεία:
+├── LATEX_SOURCES/                      # LaTeX source code
+│   ├── thesis.tex                      # Main thesis file
+│   ├── presentation.tex                # Presentation (Beamer)
+│   ├── appendix_all.tex                # Appendices
+│   ├── refs.bib                        # Bibliography (BibTeX)
+│   └── images/                         # Images and diagrams
+│       Other files:
 │       ├── thesis.loa 
 │       ├── thesis.lof 
 │       ├── thesis.lol
 │       └── thesis.lot
 │         
 │
-├── MODEL_SOLVER_CODES/                 # Κώδικας Python
-│   ├── EMS_MODEL.py                    # Μοντέλο MILP - ορισμός μεταβλητών, περιορισμών, αντικειμενικής
-│   ├── EMS_GUROBI.py                   # Υλοποίηση με Pyomo + Gurobi
+├── MODEL_SOLVER_CODES/                 # Python code
+│   ├── EMS_MODEL.py                    # MILP model – definition of variables, constraints, objective
+│   ├── EMS_GUROBI.py                   # Implementation with Pyomo + Gurobi
 │   ├── EMS_BB_BFS.py                   # Branch & Bound + Myopic + VNS + solve_instance()
-│   ├── PREDICTION.py                   # Πρόβλεψη ζήτησης με Random Forest + Predict-then-Optimize pipeline
-│   └── DATA_GENERATOR.ipynb            # Jupyter notebook για την παραγωγή δεδομένων (OCHRE simulator)
+│   ├── PREDICTION.py                   # Demand prediction with Random Forest + Predict-then-Optimize pipeline
+│   └── DATA_GENERATOR.ipynb            # Jupyter notebook for data generation (OCHRE simulator)
 │
-├── OCHRE_DATA/                         # Δεδομένα κατοικιών (OCHRE_DATA)
-│   ├── HOUSE1/                         # Δεδομένα δοκιμής (test) για Κατοικία 1
-│   ├── HOUSE1.1/                       # Δεδομένα εκπαίδευσης (train) για Κατοικία 1
-│   ├── HOUSE1.2/                       # Δεδομένα εκπαίδευσης (train) για Κατοικία 1
-│   ├── HOUSE2/                         # Δεδομένα δοκιμής (test) για Κατοικία 2
+├── OCHRE_DATA/                         # Residential data (OCHRE_DATA)
+│   ├── HOUSE1/                         # Test data for House 1
+│   ├── HOUSE1.1/                       # Training data for House 1
+│   ├── HOUSE1.2/                       # Training data for House 1
+│   ├── HOUSE2/                         # Test data for House 2
 │   ├── HOUSE2.1/
 │   ├── HOUSE2.2/
-│   ├── HOUSE3/                         # Δεδομένα δοκιμής (test) για Κατοικία 3
+│   ├── HOUSE3/                         # Test data for House 3
 │   ├── HOUSE3.1/
 │   └── HOUSE3.2/
-│       Σε κάθε φάκελο:
-│       ├── ELECTRICITY_{ATH|THESS}.csv   # Ωριαία ζήτηση ηλεκτρισμού (W)
-│       ├── DHW_{ATH|THESS}.csv           # Ωριαία ζήτηση ζεστού νερού (W)
-│       ├── SPACE_HEAT_{ATH|THESS}.csv    # Ωριαία ζήτηση θέρμανσης χώρου (W)
-│       ├── SOLAR_DATA_{ATH|THESS}.csv    # Ωριαία ηλιακή ακτινοβολία GHI (W/m²)
-│       └── TEMPERATURES_{ATH|THESS}.csv  # Θερμοκρασίες περιβάλλοντος και συλλέκτη (°C)
+│       In each folder:
+│       ├── ELECTRICITY_{ATH|THESS}.csv   # Hourly electricity demand (W)
+│       ├── DHW_{ATH|THESS}.csv           # Hourly hot water demand (W)
+│       ├── SPACE_HEAT_{ATH|THESS}.csv    # Hourly space heating demand (W)
+│       ├── SOLAR_DATA_{ATH|THESS}.csv    # Hourly solar irradiance GHI (W/m²)
+│       └── TEMPERATURES_{ATH|THESS}.csv  # Ambient and collector temperatures (°C)
 │
-└── WEATHER_DATA_ENERGY+/                # Μετεωρολογικά αρχεία EPW
-    ├── GRC_Athens.167160_IWEC.epw       # Καιρικά δεδομένα Αθήνας
-    └── GRC_Thessaloniki.166220_IWEC.epw # Καιρικά δεδομένα Θεσσαλονίκης
+└── WEATHER_DATA_ENERGY+/                # EPW weather files
+    ├── GRC_Athens.167160_IWEC.epw       # Athens weather data
+    └── GRC_Thessaloniki.166220_IWEC.epw # Thessaloniki weather data
 ```
 
 ---
 
-## Απαιτήσεις Λογισμικού
+## Software Requirements
 
-### 1. Python και Βιβλιοθήκες
+### 1. Python and Libraries
 
-Απαιτείται **Python 3.9+**. Οι κύριες βιβλιοθήκες είναι:
+**Python 3.9+** is required. The main libraries are:
 
-| Βιβλιοθήκη | Χρήση |
+| Library | Usage |
 |------------|-------|
-| `gurobipy==12.0.0` | Εμπορικός επιλυτής MILP |
-| `numpy<2.0` | Αριθμητικές πράξεις |
-| `pandas` | Διαχείριση δεδομένων |
-| `scikit-learn` | Random Forest Regressor για προβλέψεις |
-| `pyomo` | Modeling γλώσσα (εναλλακτική του gurobipy) |
-| `matplotlib` / `seaborn` | Οπτικοποίηση αποτελεσμάτων |
+| `gurobipy==12.0.0` | Commercial MILP solver |
+| `numpy<2.0` | Numerical operations |
+| `pandas` | Data management |
+| `scikit-learn` | Random Forest Regressor for predictions |
+| `pyomo` | Modeling language (alternative to gurobipy) |
+| `matplotlib` / `seaborn` | Results visualization |
 
 ### 2. Gurobi Optimizer
 
-- **Ακαδημαϊκή άδεια** 
+- **Academic license** 
 
-### 3. Εγκατάσταση Βιβλιοθηκών
+### 3. Library Installation
 
 ```bash
 pip install gurobipy==12.0.0
@@ -91,85 +91,85 @@ pip install "numpy<2.0"
 pip install pandas scikit-learn pyomo matplotlib seaborn
 ```
 
-### 4. LaTeX (μεταγλώττιση του PDF)
+### 4. LaTeX (PDF compilation)
 
-Απαιτείται **XeLaTeX**
+**XeLaTeX** is required
 
 ---
 
-## Οδηγίες Εκτέλεσης
+## Execution Instructions
 
-### Βήμα 1: Ρύθμιση δεδομένων
+### Step 1: Data setup
 
-Τα δεδομένα βρίσκονται ήδη έτοιμα στον φάκελο `OCHRE_DATA/`. Αν θέλετε να τα παράγετε από την αρχή:
+The data are already available in the `OCHRE_DATA/` folder. If you wish to generate them from scratch:
 
-1. Ανοίξτε το `code/DATA_GENERATOR.ipynb` στο Google Colab
-2. Εκτελέστε τα cells με τη σειρά:
-   - **Cell 1**: Εγκατάσταση (OCHRE, numpy, gurobipy)
-   - **Cell 2**: Αντιγραφή του προτύπου XML του OCHRE
-   - **Cell 3**: Δημιουργία XML αρχείων για κάθε κατοικία/πόλη
-   - **Cell 4**: Παράγει τα CSV
-   - **Cell 5**: Παράγει τα CSV για τις πανομοιότυπες κατοικίες
+1. Open `code/DATA_GENERATOR.ipynb` in Google Colab
+2. Run the cells in order:
+   - **Cell 1**: Installation (OCHRE, numpy, gurobipy)
+   - **Cell 2**: Copy the OCHRE XML template
+   - **Cell 3**: Create XML files for each house/city
+   - **Cell 4**: Generate the CSVs
+   - **Cell 5**: Generate the CSVs for identical houses
 
-Το DATA_GENERATOR.ipynb έχει σχεδιαστεί για Google Colab (χρησιμοποιεί διαδρομές `/content/`). Για τοπική εκτέλεση θα χρειαστούν τροποποιήσεις στις διαδρομές.
+DATA_GENERATOR.ipynb is designed for Google Colab (uses `/content/` paths). For local execution, path modifications will be required.
 
-### Βήμα 2: Επίλυση με Gurobi (Perfect Information)
+### Step 2: Solving with Gurobi (Perfect Information)
 
-Για να τρέξετε τον εμπορικό επιλυτή Gurobi:
+To run the commercial Gurobi solver:
 
 ```bash
 python EMS_GUROBI.py --house HOUSE3 --location THESS --data-dir ../data --hours 8760
 ```
 
-**Παράμετροι**:
-- `--house`: Κατοικία (HOUSE1, HOUSE2, HOUSE3)
-- `--location`: Πόλη (ATH, THESS)
-- `--data-dir`: Διαδρομή προς τον φάκελο δεδομένων
-- `--hours`: Χρονικός ορίζοντας σε ώρες (8760 για ένα έτος)
+**Parameters**:
+- `--house`: House (HOUSE1, HOUSE2, HOUSE3)
+- `--location`: City (ATH, THESS)
+- `--data-dir`: Path to the data folder
+- `--hours`: Time horizon in hours (8760 for one year)
 
-### Βήμα 3: Branch & Bound (Custom Solver)
+### Step 3: Branch & Bound (Custom Solver)
 
-Για τον custom αλγόριθμο Branch & Bound με Myopic και VNS:
+For the custom Branch & Bound algorithm with Myopic and VNS:
 
 ```bash
 python EMS_BB_BFS.py
 ```
 
-**Σημείωση**: Το αρχείο `EMS_BB_BFS.py` στο κυρίως block (`if __name__ == "__main__"`) είναι ρυθμισμένο για HOUSE3/THESS. Τροποποιήστε τη γραμμή:
+**Note**: The file `EMS_BB_BFS.py` in the main block (`if __name__ == "__main__"`) is configured for HOUSE3/THESS. Modify the line:
 
 ```python
 data = load_data(location="THESS", T=8760, data_directory=os.path.expanduser("~/DB_WORKSPACE/HOUSE3"))
 ```
 
-Αλλάξτε το `data_directory` ώστε να δείχνει στον σωστό φάκελο.
+Change `data_directory` to point to the correct folder.
 
-### Βήμα 4: Predict-then-Optimize (Πρόβλεψη + Βελτιστοποίηση)
+### Step 4: Predict-then-Optimize (Prediction + Optimization)
 
-Για την πλήρη ροή πρόβλεψης-βελτιστοποίησης:
+For the full predict-then-optimize pipeline:
 
 ```bash
 python PREDICTION.py
 ```
 
-**Ροή**:
-1. Φορτώνει δεδομένα από τα train houses (π.χ. HOUSE3.1, HOUSE3.2) και το test house (HOUSE3)
-2. Εκπαιδεύει Random Forest μοντέλα για πρόβλεψη ηλεκτρισμού, ζεστού νερού, θέρμανσης
-3. Τρέχει:
-   - **Perfect Information**: Βελτιστοποίηση με τα πραγματικά δεδομένα
-   - **Forecasted Information**: Βελτιστοποίηση με τα προβλεπόμενα δεδομένα (με 0% και 20% θόρυβο)
-4. Συγκρίνει το κόστος μεταξύ Perfect και Forecasted πληροφορίας
+**Flow**:
+1. Loads data from the train houses (e.g., HOUSE3.1, HOUSE3.2) and the test house (HOUSE3)
+2. Trains Random Forest models for predicting electricity, hot water, space heating
+3. Runs:
+   - **Perfect Information**: Optimization with actual data
+   - **Forecasted Information**: Optimization with predicted data (with 0% and 20% noise)
+4. Compares costs between Perfect and Forecasted information
 
-**Σημαντική ρύθμιση**: Στο `PREDICTION.py`, η μεταβλητή `data_directory` στη γραμμή:
+**Important setting**: In `PREDICTION.py`, the variable `data_directory` at line:
 ```python
 data_directory = os.path.expanduser("~/DB_WORKSPACE")
 ```
-πρέπει να αλλάξει ώστε να δείχνει στον σωστό φάκελο.
+must be changed to point to the correct folder.
 
 ---
 
-## Αναμενόμενα Αποτελέσματα
+## Expected Results
 
-### Έξοδος EMS_BB_BFS.py
+### Output of EMS_BB_BFS.py
 
 ```
 ************************ MYOPIC HEURISTIC ************************
@@ -185,7 +185,7 @@ binary_pv = ... (COST=...)
 ************************ EMS BRANCH & BOUND ************************
 >>> WARM START B&B WITH UB = ...
 
-************************ ΑΠΟΤΕΛΕΣΜΑΤΑ ΜΟΝΤΕΛΟΥ ************************
+************************ MODEL RESULTS ************************
 Fuel Cell Capacity:         ... kW
 PV Capacity:                ... kWp
 Solar Thermal Area:         ... m²
@@ -211,7 +211,7 @@ GAP BETWEEN HEURISTIC AND BB:  ...%
 NODES VISITED: ...
 ```
 
-### Έξοδος PREDICTION.py
+### Output of PREDICTION.py
 
 ```
 ----- Predict then Optimize: HOUSE3 -----
@@ -221,13 +221,13 @@ Test house:   HOUSE3
 [THESS] Forecast r2 (Hot water):   ...   RMSE: ... W
 [THESS] Forecast r2 (Space Heat):  ...   RMSE: ... W
 
-ΑΠΟΤΕΛΕΣΜΑΤΑ [THESS]
+RESULTS [THESS]
 Noise Level: 0%
 Perfect information:            ... CHF
 Forecasted information:         ... CHF
 Forecast - Perfect Info:        ... CHF
 
-ΑΠΟΤΕΛΕΣΜΑΤΑ [THESS]
+RESULTS [THESS]
 Noise Level: 20%
 Perfect information:            ... CHF
 Forecasted information:         ... CHF
@@ -236,37 +236,37 @@ Forecast - Perfect Info:        ... CHF
 
 ---
 
-## Αντιμετώπιση Προβλημάτων
+## Troubleshooting
 
-### Πρόβλημα: "gurobipy module not found"
+### Problem: "gurobipy module not found"
 ```bash
 pip install gurobipy==12.0.0
 ```
-Βεβαιωθείτε ότι το Gurobi Optimizer είναι εγκατεστημένο και η άδεια ενεργοποιημένη.
+Ensure that Gurobi Optimizer is installed and the license is activated.
 
-### Πρόβλημα: "No Gurobi license found"
-Ακολουθήστε τις οδηγίες στο https://www.gurobi.com/academia/academic-program-and-licenses/ για ακαδημαϊκή άδεια.
+### Problem: "No Gurobi license found"
+Follow the instructions at https://www.gurobi.com/academia/academic-program-and-licenses/ for an academic license.
 
-### Πρόβλημα: FileNotFoundError για τα CSV αρχεία
-Βεβαιωθείτε ότι οι διαδρομές στα scripts δείχνουν στον σωστό φάκελο.
+### Problem: FileNotFoundError for CSV files
+Ensure that the paths in the scripts point to the correct folder.
 
-### Πρόβλημα: "numpy<2.0" incompatibility
+### Problem: "numpy<2.0" incompatibility
 ```bash
 pip install "numpy<2.0"
 ```
-Ο κώδικας απαιτεί numpy 1.x λόγω συμβατότητας με παλαιότερες εκδόσεις βιβλιοθηκών.
+The code requires numpy 1.x due to compatibility with older library versions.
 
 ---
 
-## Μεταγλώττιση LaTeX
+## LaTeX Compilation
 
-Για την παραγωγή του PDF της διπλωματικής και της παρουσίασης:
+To produce the thesis and presentation PDF:
 
 xelatex  
 
 ---
 
-## Αναφορές
+## References
 
 D. Lauinger et al. “A linear programming approach to the optimization of residential energy systems”
 
