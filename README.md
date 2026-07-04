@@ -2,7 +2,7 @@
 
 ## Description
 
-Diploma thesis titled **"Predict then Optimize Approach for Energy Systems"** by Bispas Dimitrios, at the Department of Electrical & Computer Engineering of the University of Western Macedonia.
+Diploma thesis titled **"Predict then Optimize Approach for Energy Systems"** by Bismpas Dimitrios, at the Department of Electrical & Computer Engineering of the University of Western Macedonia.
  
 The objective is the optimal sizing and operation of residential energy systems (fuel cell, photovoltaics, solar water heater, heat pump, natural gas boiler, battery, thermal storage tank) by minimizing the annual cost, via:
 - **Prediction** of demand (Random Forest) for electricity, hot water, and space heating
